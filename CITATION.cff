@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this benchmark or codebase in your research, please cite it as below."
+title: "Industrial Defect Anomaly Benchmark: Multi-Method Evaluation and Robustness Stress-Testing"
+version: 1.0.0
+authors:
+  - family-names: "Sengar"
+    given-names: "Utkarsh"
+date-released: 2026-08-18
+url: "https://github.com/sengarutk/industrial-defect-anomaly-benchmark"
+keywords:
+  - anomaly-detection
+  - industrial-inspection
+  - mvtec-ad
+  - patchcore
+  - padim
+  - robustness
+  - out-of-distribution

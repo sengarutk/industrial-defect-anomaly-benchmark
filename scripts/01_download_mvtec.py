@@ -1,18 +1,10 @@
 import os
-from src.config import TrainConfig
+import sys
 
-def main():
-    cfg = TrainConfig()
-    root = cfg.mvtec_root
+# Ensure repository root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-    assert os.path.exists(root), f"Dataset not found at: {root}"
-    for cat in cfg.categories:
-        p = os.path.join(root, cat)
-        assert os.path.isdir(p), f"Missing category folder: {p}"
-        assert os.path.isdir(os.path.join(p, "train", "good")), "Missing train/good"
-        assert os.path.isdir(os.path.join(p, "test")), "Missing test/"
-        assert os.path.isdir(os.path.join(p, "ground_truth")), "Missing ground_truth/"
-    print("MVTec AD structure looks correct.")
+from scripts.download_dataset import main
 
 if __name__ == "__main__":
     main()

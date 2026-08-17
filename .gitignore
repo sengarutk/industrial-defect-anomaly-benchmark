@@ -1,0 +1,35 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Data & Large Checkpoints
+data/
+runs/artifacts/
+runs/plots/
+*.pt
+*.pth
+*.pkl
+*.bin
+*.tar.gz
+*.zip
+
+# Pytest & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & System
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+wandb/
+.env
