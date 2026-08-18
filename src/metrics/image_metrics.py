@@ -1,108 +1,89 @@
 import warnings
-from typing import Dict
+from typing import Dict, Any, Union
 import numpy as np
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import roc_auc_score, average_precision_score, precision_recall_curve
 
 
 def compute_image_auroc(labels: np.ndarray, scores: np.ndarray) -> float:
-    """
-    Computes sample/image-level Area Under the ROC curve.
-    labels: binary ground truth labels [N] in {0, 1}
-    scores: continuous anomaly scores [N]
-    """
-    y_true = np.asarray(labels).flatten().astype(int)
-    y_score = np.asarray(scores).flatten().astype(float)
-
-    if len(np.unique(y_true)) < 2:
-        warnings.warn("compute_image_auroc: Ground truth contains only one class. Returning 0.5.")
+    unique_classes = np.unique(labels)
+    if len(unique_classes) < 2:
+        warnings.warn("compute_image_auroc: Labels contain only one class. Returning 0.5.")
         return 0.5
-
-    try:
-        score = float(roc_auc_score(y_true, y_score))
-        return score
-    except ValueError:
-        return 0.5
+    return float(roc_auc_score(labels, scores))
 
 
 def compute_image_ap(labels: np.ndarray, scores: np.ndarray) -> float:
-    """
-    Computes sample/image-level Average Precision (AP).
-    labels: binary ground truth labels [N] in {0, 1}
-    scores: continuous anomaly scores [N]
-    """
-    y_true = np.asarray(labels).flatten().astype(int)
-    y_score = np.asarray(scores).flatten().astype(float)
-
-    if len(np.unique(y_true)) < 2:
-        warnings.warn("compute_image_ap: Ground truth contains only one class. Returning 0.0.")
+    unique_classes = np.unique(labels)
+    if len(unique_classes) < 2:
+        warnings.warn("compute_image_ap: Labels contain only one class. Returning 0.0.")
         return 0.0
-
-    try:
-        score = float(average_precision_score(y_true, y_score))
-        return score
-    except ValueError:
-        return 0.0
+    return float(average_precision_score(labels, scores))
 
 
-def auroc(y_true: np.ndarray, y_score: np.ndarray) -> float:
-    """
-    Backward-compatible alias for compute_image_auroc.
-    """
-    return compute_image_auroc(y_true, y_score)
+def compute_quantile_threshold(nominal_scores: np.ndarray, quantile: float = 0.99) -> float:
+    if len(nominal_scores) == 0:
+        return 0.5
+    return float(np.percentile(nominal_scores, quantile * 100.0))
 
 
-def compute_optimal_f1(
-    labels: np.ndarray,
-    scores: np.ndarray,
-    num_thresholds: int = 1000
-) -> Dict[str, float]:
-    """
-    Locates the optimal decision boundary that maximizes the F1-score:
-      F1 = 2 * (Precision * Recall) / (Precision + Recall)
-    Returns:
-      dict with keys: max_f1, optimal_threshold, precision_at_optimal, recall_at_optimal
-    """
-    y_true = np.asarray(labels).flatten().astype(int)
-    y_score = np.asarray(scores).flatten().astype(float)
+def compute_optimal_f1(labels: np.ndarray, scores: np.ndarray) -> Dict[str, float]:
+    labels = np.asarray(labels, dtype=int)
+    scores = np.asarray(scores, dtype=float)
 
-    if len(y_true) == 0:
+    if len(np.unique(labels)) < 2:
+        med = float(np.mean(scores)) if len(scores) > 0 else 0.5
         return {
             "max_f1": 0.0,
-            "optimal_threshold": 0.0,
+            "optimal_threshold": med,
+            "oracle_max_f1": 0.0,
+            "oracle_threshold": med,
+            "precision": 0.0,
+            "recall": 0.0,
             "precision_at_optimal": 0.0,
-            "recall_at_optimal": 0.0,
+            "recall_at_optimal": 0.0
         }
 
-    unique_scores = np.unique(y_score)
-    if len(unique_scores) <= num_thresholds:
-        thresholds = unique_scores
-    else:
-        thresholds = np.linspace(float(np.min(y_score)), float(np.max(y_score)), num_thresholds)
+    precisions, recalls, thresholds = precision_recall_curve(labels, scores)
 
-    best_f1 = 0.0
-    best_threshold = float(thresholds[0]) if len(thresholds) > 0 else 0.0
-    best_prec = 0.0
-    best_rec = 0.0
+    f1_scores = np.zeros_like(thresholds)
+    for i in range(len(thresholds)):
+        p = precisions[i]
+        r = recalls[i]
+        if (p + r) > 0:
+            f1_scores[i] = (2 * p * r) / (p + r)
+        else:
+            f1_scores[i] = 0.0
 
-    for thresh in thresholds:
-        preds = (y_score >= thresh).astype(int)
-        tp = np.sum((preds == 1) & (y_true == 1))
-        fp = np.sum((preds == 1) & (y_true == 0))
-        fn = np.sum((preds == 0) & (y_true == 1))
+    if len(f1_scores) == 0 or np.max(f1_scores) == 0:
+        med = float(np.median(scores))
+        return {
+            "max_f1": 0.0,
+            "optimal_threshold": med,
+            "oracle_max_f1": 0.0,
+            "oracle_threshold": med,
+            "precision": 0.0,
+            "recall": 0.0,
+            "precision_at_optimal": 0.0,
+            "recall_at_optimal": 0.0
+        }
 
-        prec = float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
-        rec = float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
-        f1 = float(2.0 * prec * rec / (prec + rec)) if (prec + rec) > 0 else 0.0
-
-        if f1 > best_f1:
-            best_f1 = f1
-            best_threshold = float(thresh)
-            best_prec = prec
-            best_rec = rec
+    best_idx = int(np.argmax(f1_scores))
+    best_f1 = float(f1_scores[best_idx])
+    best_th = float(thresholds[best_idx])
+    best_prec = float(precisions[best_idx])
+    best_rec = float(recalls[best_idx])
 
     return {
-        "max_f1": float(np.clip(best_f1, 0.0, 1.0)),
-        "optimal_threshold": best_threshold,
-        "precision_at_optimal": float(np.clip(best_prec, 0.0, 1.0)),
-        "recall_at_optimal": float(np.clip(best_rec, 0.0, 1.0)),
+        "max_f1": best_f1,
+        "optimal_threshold": best_th,
+        "oracle_max_f1": best_f1,
+        "oracle_threshold": best_th,
+        "precision": best_prec,
+        "recall": best_rec,
+        "precision_at_optimal": best_prec,
+        "recall_at_optimal": best_rec
     }
+
+
+def auroc(labels: np.ndarray, scores: np.ndarray) -> float:
+    return compute_image_auroc(labels, scores)

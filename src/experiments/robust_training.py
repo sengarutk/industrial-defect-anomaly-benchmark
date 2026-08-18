@@ -18,7 +18,7 @@ from src.robustness.evaluator import RobustnessEvaluator
 class AugmentedNormalDataset(Dataset):
     """
     Applies mild physical perturbations to nominal training images
-    to test whether slight corruption-aware augmentation improves out-of-distribution robustness.
+    to evaluate whether slight corruption-aware augmentation improves out-of-distribution robustness.
     """
     def __init__(self, root: str, category: str, aug_prob: float = 0.3):
         self.base = MVTecTrainNormal(root, category)
@@ -29,18 +29,15 @@ class AugmentedNormalDataset(Dataset):
 
     def _apply_mild_augmentations(self, img_np: np.ndarray) -> np.ndarray:
         arr = img_np.copy()
-        # 1. Mild Gaussian blur
         if random.random() < self.aug_prob:
             k = random.choice([3, 5])
             sig = random.uniform(0.5, 1.0)
             arr = cv2.GaussianBlur(arr, (k, k), sigmaX=sig, sigmaY=sig)
 
-        # 2. Mild brightness scale
         if random.random() < self.aug_prob:
             factor = random.uniform(0.8, 1.1)
             arr = np.clip(arr.astype(np.float32) * factor, 0, 255).astype(np.uint8)
 
-        # 3. Mild JPEG compression
         if random.random() < self.aug_prob:
             q = random.randint(60, 90)
             bgr = cv2.cvtColor(arr, cv2.COLOR_RGB2BGR)
@@ -63,7 +60,7 @@ class AugmentedNormalDataset(Dataset):
 class RobustTrainingExperiment:
     """
     Ablation study: Trains anomaly detectors on standard vs. augmented nominal images,
-    evaluating clean accuracy tradeoffs vs. corrupted robustness gains (Delta mCE).
+    evaluating clean accuracy retention vs. corrupted robustness gains (Delta MRD).
     """
     def __init__(
         self,
@@ -88,9 +85,6 @@ class RobustTrainingExperiment:
             raise ValueError(f"Unknown method: {self.method}")
 
     def run_comparison(self, seed: int = 42, batch_size: int = 4) -> Dict[str, Any]:
-        """
-        Runs end-to-end ablation comparing standard vs. robust training.
-        """
         seed_everything(seed)
 
         # 1. Train Standard Model on Clean Nominals
@@ -116,11 +110,11 @@ class RobustTrainingExperiment:
         # 3. Compute Delta Tradeoffs
         clean_auroc = clean_stress_results["clean_metrics"]["image_auroc"]
         clean_aupro = clean_stress_results["clean_metrics"]["aupro"]
-        clean_mCE = clean_stress_results["mCE_image_auroc"]
+        clean_mrd = clean_stress_results["mrd_image_auroc"]
 
         robust_auroc = robust_stress_results["clean_metrics"]["image_auroc"]
         robust_aupro = robust_stress_results["clean_metrics"]["aupro"]
-        robust_mCE = robust_stress_results["mCE_image_auroc"]
+        robust_mrd = robust_stress_results["mrd_image_auroc"]
 
         summary = {
             "category": self.category,
@@ -129,16 +123,21 @@ class RobustTrainingExperiment:
             "clean_model": {
                 "clean_auroc": clean_auroc,
                 "clean_aupro": clean_aupro,
-                "mCE_auroc": clean_mCE,
-                "mCE_aupro": clean_stress_results["mCE_aupro"]
+                "mrd_image_auroc": clean_mrd,
+                "mrd_aupro": clean_stress_results["mrd_aupro"],
+                "mCE_auroc": clean_mrd,
+                "mCE_aupro": clean_stress_results["mrd_aupro"]
             },
             "robust_model": {
                 "clean_auroc": robust_auroc,
                 "clean_aupro": robust_aupro,
-                "mCE_auroc": robust_mCE,
-                "mCE_aupro": robust_stress_results["mCE_aupro"]
+                "mrd_image_auroc": robust_mrd,
+                "mrd_aupro": robust_stress_results["mrd_aupro"],
+                "mCE_auroc": robust_mrd,
+                "mCE_aupro": robust_stress_results["mrd_aupro"]
             },
             "delta_clean_auroc": robust_auroc - clean_auroc,
-            "delta_mCE_auroc": robust_mCE - clean_mCE  # Negative value means robustness improvement
+            "delta_mrd_auroc": robust_mrd - clean_mrd,
+            "delta_mCE_auroc": robust_mrd - clean_mrd
         }
         return summary

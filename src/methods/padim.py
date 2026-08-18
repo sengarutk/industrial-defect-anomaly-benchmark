@@ -1,182 +1,175 @@
-import os
-from typing import Tuple, Optional, List
+from typing import Tuple, List, Optional
 import numpy as np
-import scipy.ndimage
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-import torchvision.models as tvm
+import torchvision.models as models
+from scipy.ndimage import gaussian_filter
 
-from .base import BaseAnomalyDetector
+from src.methods.base import BaseAnomalyDetector
 
 
 class PaDiM(BaseAnomalyDetector):
     """
-    PaDiM: A Patch Distribution Modeling Framework for Anomaly Detection and Localization.
-    - Extracts multi-scale features from layer1, layer2, and layer3
-    - Bilinearly aligns all features to layer1 spatial resolution (64x64 for 256x256 inputs)
-    - Subsamples a fixed subset of d_dim channels (default 100)
-    - Estimates multivariate Gaussian distribution (mean and inverse covariance with shrinkage) per patch position
-    - Computes Mahalanobis distance at test time for precise pixel localization
+    PaDiM-inspired Anomaly Detector.
+    Models normal patch distributions as localized multivariate Gaussian distributions with
+    Fixed Diagonal Covariance Regularization (Sigma + lambda * I, lambda=0.01).
     """
     def __init__(
         self,
         backbone: str = "resnet18",
-        d_dim: int = 100,
+        d_reduced: int = 100,
         device: Optional[str] = None,
-        seed: int = 42
+        sigma: float = 4.0,
+        random_seed: int = 42,
+        d_dim: Optional[int] = None,
+        seed: Optional[int] = None
     ):
-        super().__init__(device=device)
-        self.backbone_name = backbone
-        self.d_dim = d_dim
-        self.seed = seed
+        super().__init__()
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.d_reduced = d_dim if d_dim is not None else d_reduced
+        self.sigma = sigma
+        self.random_seed = seed if seed is not None else random_seed
 
+        # Load ResNet-18
         if backbone == "resnet18":
-            weights = tvm.ResNet18_Weights.IMAGENET1K_V1
-            net = tvm.resnet18(weights=weights)
-            total_channels = 64 + 128 + 256  # layer1: 64, layer2: 128, layer3: 256 = 448
-        elif backbone == "resnet50":
-            weights = tvm.ResNet50_Weights.IMAGENET1K_V2
-            net = tvm.resnet50(weights=weights)
-            total_channels = 256 + 512 + 1024  # 1792
+            weights = models.ResNet18_Weights.IMAGENET1K_V1
+            self.feature_extractor = models.resnet18(weights=weights).to(self.device)
         else:
             raise ValueError(f"Unsupported backbone: {backbone}")
 
-        self.net = net.to(self.device).eval()
-        for param in self.net.parameters():
+        self.feature_extractor.eval()
+        for param in self.feature_extractor.parameters():
             param.requires_grad = False
 
-        # Randomly select a fixed subset of channel indices
-        g = torch.Generator()
-        g.manual_seed(seed)
-        actual_d = min(self.d_dim, total_channels)
-        self.channel_indices = torch.randperm(total_channels, generator=g)[:actual_d]
+        self.mean_grid: Optional[torch.Tensor] = None
+        self.inv_cov_grid: Optional[torch.Tensor] = None
+        self.idx_selected: Optional[torch.Tensor] = None
 
-        # Learned statistical parameters per spatial position (H_p=64, W_p=64)
-        self.mean: Optional[torch.Tensor] = None          # [d, 64, 64]
-        self.inv_cov: Optional[torch.Tensor] = None       # [64, 64, d, d]
+    @property
+    def mean(self) -> Optional[torch.Tensor]:
+        return self.mean_grid
 
-    def _extract_embedding_map(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Extracts layer1, layer2, layer3 features, upsamples to layer1 resolution (64x64),
-        concatenates, and selects d_dim channels.
-        Returns: [B, d_dim, 64, 64]
-        """
+    @property
+    def cov(self) -> Optional[torch.Tensor]:
+        return self.inv_cov_grid
+
+    @property
+    def inv_cov(self) -> Optional[torch.Tensor]:
+        return self.inv_cov_grid
+
+    def _extract_multiscale_features(self, x: torch.Tensor) -> torch.Tensor:
         x = x.to(self.device)
-        with torch.no_grad():
-            x0 = self.net.conv1(x)
-            x0 = self.net.bn1(x0)
-            x0 = self.net.relu(x0)
-            x0 = self.net.maxpool(x0)
+        f_maps: List[torch.Tensor] = []
 
-            l1 = self.net.layer1(x0)  # [B, 64, 64, 64]
-            l2 = self.net.layer2(l1)  # [B, 128, 32, 32]
-            l3 = self.net.layer3(l2)  # [B, 256, 16, 16]
+        feat = self.feature_extractor.conv1(x)
+        feat = self.feature_extractor.bn1(feat)
+        feat = self.feature_extractor.relu(feat)
+        feat = self.feature_extractor.maxpool(feat)
 
-            # Upsample l2 and l3 to layer1 spatial resolution
-            l2_up = F.interpolate(l2, size=l1.shape[2:], mode="bilinear", align_corners=False)
-            l3_up = F.interpolate(l3, size=l1.shape[2:], mode="bilinear", align_corners=False)
+        feat1 = self.feature_extractor.layer1(feat)
+        feat2 = self.feature_extractor.layer2(feat1)
+        feat3 = self.feature_extractor.layer3(feat2)
 
-            # Concat along channel dimension
-            feat = torch.cat([l1, l2_up, l3_up], dim=1)  # [B, 448, 64, 64]
+        f_maps = [feat1, feat2, feat3]
+        target_size = feat1.shape[-2:]
 
-            # Select deterministic subset of channels
-            feat_sub = feat[:, self.channel_indices.to(self.device), :, :]
-            return feat_sub
+        resized_fmaps = []
+        for f in f_maps:
+            if f.shape[-2:] != target_size:
+                resized = F.interpolate(f, size=target_size, mode="bilinear", align_corners=False)
+            else:
+                resized = f
+            resized_fmaps.append(resized)
+
+        cat_fmaps = torch.cat(resized_fmaps, dim=1)
+        return cat_fmaps
 
     def fit(self, dataloader: DataLoader) -> None:
-        """
-        Estimates spatial Gaussian distributions (mean vector and inverse covariance matrix)
-        for every position (i, j) in the [64, 64] grid across normal training images.
-        """
-        feats_list = []
-        for batch in dataloader:
-            if isinstance(batch, (list, tuple)):
-                x = batch[0]
-            else:
-                x = batch
-            feat = self._extract_embedding_map(x)
-            feats_list.append(feat)
+        all_embeddings: List[torch.Tensor] = []
 
-        # X: [N, d, H, W]
-        X = torch.cat(feats_list, dim=0)
-        N, d, H, W = X.shape
+        with torch.no_grad():
+            for batch in dataloader:
+                x = batch[0] if isinstance(batch, (list, tuple)) else batch
+                feats = self._extract_multiscale_features(x)
+                all_embeddings.append(feats)
 
-        # Compute sample mean: [d, H, W]
-        mean = torch.mean(X, dim=0)
+        embeddings = torch.cat(all_embeddings, dim=0)
+        B, C, H, W = embeddings.shape
 
-        # Compute covariance matrix per spatial location with shrinkage regularization
-        # Reshape X centered: [N, d, H*W] -> permute to [H*W, N, d]
-        X_centered = (X - mean.unsqueeze(0)).reshape(N, d, H * W).permute(2, 0, 1)  # [P, N, d] where P = H*W
+        torch.manual_seed(self.random_seed)
+        if self.d_reduced < C:
+            self.idx_selected = torch.randperm(C)[:self.d_reduced].to(self.device)
+            embeddings = torch.index_select(embeddings, 1, self.idx_selected)
+        else:
+            self.idx_selected = torch.arange(C, device=self.device)
 
-        # Sample covariance: [P, d, d]
-        cov = torch.bmm(X_centered.transpose(1, 2), X_centered) / max(N - 1, 1)
+        _, d, H, W = embeddings.shape
+        L = H * W
+        feats_flat = embeddings.permute(0, 2, 3, 1).reshape(B, L, d)
 
-        # Shrinkage regularization: Sigma + 0.01 * I
-        eye = torch.eye(d, device=self.device).unsqueeze(0)  # [1, d, d]
-        cov_reg = cov + 0.01 * eye
+        mean_grid = torch.mean(feats_flat, dim=0)
 
-        # Precompute pseudo-inverse of covariance: [P, d, d] -> [H, W, d, d]
-        inv_cov = torch.linalg.pinv(cov_reg).reshape(H, W, d, d)
+        # Fixed diagonal Tikhonov regularization for numerical invertibility: Sigma + lambda * I (lambda = 0.01)
+        cov_grid = torch.zeros((L, d, d), device=self.device)
+        for p in range(L):
+            diff = feats_flat[:, p, :] - mean_grid[p, :]
+            cov = torch.mm(diff.t(), diff) / (B - 1)
+            cov_grid[p] = cov + 0.01 * torch.eye(d, device=self.device)
 
-        self.mean = mean
-        self.inv_cov = inv_cov
+        inv_cov_grid = torch.linalg.inv(cov_grid)
+
+        # Shape mean_grid as (d, H, W) for standard evaluation compatibility
+        self.mean_grid = mean_grid.reshape(H, W, d).permute(2, 0, 1)
+        self.inv_cov_grid = inv_cov_grid.reshape(H, W, d, d)
 
     def predict(self, x: torch.Tensor) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Computes Mahalanobis distance heatmap at each spatial position [64, 64],
-        upsamples to [256, 256], applies Gaussian filter, and takes max as image score.
-        """
-        if self.mean is None or self.inv_cov is None:
-            raise RuntimeError("PaDiM model is not fitted. Call .fit() first.")
+        if self.mean_grid is None or self.inv_cov_grid is None:
+            raise RuntimeError("PaDiM model is not fitted yet.")
 
-        B, _, H_in, W_in = x.shape
-        feat = self._extract_embedding_map(x)  # [B, d, H_p, W_p]
-        _, d, H_p, W_p = feat.shape
+        x = x.to(self.device)
+        with torch.no_grad():
+            feats = self._extract_multiscale_features(x)
+            feats = torch.index_select(feats, 1, self.idx_selected)
+            B, d, H, W = feats.shape
 
-        # delta: [B, d, H_p, W_p] -> permute to [B, H_p * W_p, d]
-        delta = (feat - self.mean.unsqueeze(0)).reshape(B, d, H_p * W_p).permute(0, 2, 1)  # [B, P, d]
-        inv_cov_flat = self.inv_cov.reshape(H_p * W_p, d, d)  # [P, d, d]
+            # diff: (B, d, H, W) -> permute to (B, H, W, d)
+            diff = (feats - self.mean_grid.unsqueeze(0)).permute(0, 2, 3, 1)
 
-        # Mahalanobis distance squared: delta * inv_cov * delta^T
-        # Einstein summation: b: batch, p: pixel pos, i,j: channels
-        m_dist_sq = torch.einsum("bpi,pij,bpj->bp", delta, inv_cov_flat, delta)
-        m_dist = torch.sqrt(torch.clamp(m_dist_sq, min=1e-12))  # [B, P]
+            # Vectorized Mahalanobis distance: (B, H, W, d) x (H, W, d, d) x (B, H, W, d) -> (B, H, W)
+            dist_sq = torch.einsum("bhwd,hwde,bhwe->bhw", diff, self.inv_cov_grid, diff)
+            dist = torch.sqrt(torch.clamp(dist_sq, min=0.0))
 
-        # Reshape to [B, 1, H_p, W_p]
-        dist_map = m_dist.reshape(B, 1, H_p, W_p)
+            dist_maps = dist.unsqueeze(1)
+            dist_maps = F.interpolate(dist_maps, size=(x.shape[-2], x.shape[-1]), mode="bilinear", align_corners=False)
+            dist_maps = dist_maps.squeeze(1).cpu().numpy()
 
-        # Upsample to [B, 256, 256]
-        amaps_tensor = F.interpolate(dist_map, size=(H_in, W_in), mode="bilinear", align_corners=False)
-        amaps_np = amaps_tensor.squeeze(1).detach().cpu().numpy()
+        smoothed_amaps = []
+        for i in range(B):
+            amap = gaussian_filter(dist_maps[i], sigma=self.sigma)
+            smoothed_amaps.append(amap)
 
-        smoothed_amaps = np.zeros_like(amaps_np)
-        image_scores = np.zeros(B, dtype=float)
+        amaps_arr = np.stack(smoothed_amaps, axis=0)
+        image_scores = np.max(amaps_arr, axis=(1, 2))
 
-        for b in range(B):
-            smoothed_amaps[b] = scipy.ndimage.gaussian_filter(amaps_np[b], sigma=4)
-            image_scores[b] = float(np.max(smoothed_amaps[b]))
-
-        return image_scores, smoothed_amaps
+        return image_scores, amaps_arr
 
     def save(self, path: str) -> None:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
         torch.save({
-            "mean": self.mean.cpu() if self.mean is not None else None,
-            "inv_cov": self.inv_cov.cpu() if self.inv_cov is not None else None,
-            "channel_indices": self.channel_indices.cpu(),
-            "backbone": self.backbone_name,
-            "d_dim": self.d_dim,
-            "seed": self.seed
+            "mean_grid": self.mean_grid,
+            "inv_cov_grid": self.inv_cov_grid,
+            "idx_selected": self.idx_selected,
+            "d_reduced": self.d_reduced,
+            "sigma": self.sigma,
+            "random_seed": self.random_seed
         }, path)
 
     def load(self, path: str) -> None:
-        state = torch.load(path, map_location=self.device)
-        m = state.get("mean")
-        ic = state.get("inv_cov")
-        self.mean = m.to(self.device) if m is not None else None
-        self.inv_cov = ic.to(self.device) if ic is not None else None
-        self.channel_indices = state.get("channel_indices")
-        self.backbone_name = state.get("backbone", "resnet18")
-        self.d_dim = state.get("d_dim", 100)
-        self.seed = state.get("seed", 42)
+        checkpoint = torch.load(path, map_location=self.device)
+        self.mean_grid = checkpoint["mean_grid"].to(self.device)
+        self.inv_cov_grid = checkpoint["inv_cov_grid"].to(self.device)
+        self.idx_selected = checkpoint["idx_selected"].to(self.device)
+        self.d_reduced = checkpoint["d_reduced"]
+        self.sigma = checkpoint["sigma"]
+        self.random_seed = checkpoint["random_seed"]

@@ -1,0 +1,31 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions.}
+\label{tab:robustness_mrd_mpc}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Category} & \textbf{Method} & \textbf{Clean AUROC} & \textbf{Non-Neg MRD (AUROC)} $\downarrow$ & \textbf{Non-Neg MRD (AU-PRO)} $\downarrow$ & \textbf{Signed MPC (AUROC)} $\Delta$ \\
+\midrule
+bottle & Autoencoder & 0.5053 & -0.1261 & 0.1169 & -0.1261 \\
+bottle & Padim & 0.9970 & 0.0977 & 0.0890 & +0.0977 \\
+bottle & Patchcore & 1.0000 & 0.0284 & 0.0443 & +0.0284 \\
+\midrule
+cable & Autoencoder & 0.4516 & -0.0193 & 0.0362 & -0.0193 \\
+cable & Padim & 0.8617 & 0.0238 & 0.0369 & +0.0238 \\
+cable & Patchcore & 0.9903 & 0.0535 & 0.0380 & +0.0535 \\
+\midrule
+carpet & Autoencoder & 0.3904 & -0.0284 & 0.0056 & -0.0284 \\
+carpet & Padim & 0.9639 & 0.0745 & 0.0787 & +0.0745 \\
+carpet & Patchcore & 0.9843 & 0.0378 & 0.0610 & +0.0378 \\
+\midrule
+hazelnut & Autoencoder & 0.7354 & -0.0217 & 0.0566 & -0.0217 \\
+hazelnut & Padim & 0.8404 & -0.0118 & 0.0620 & -0.0118 \\
+hazelnut & Patchcore & 0.9996 & 0.0046 & 0.0222 & +0.0046 \\
+\midrule
+metal_nut & Autoencoder & 0.3047 & -0.0810 & 0.0043 & -0.0810 \\
+metal_nut & Padim & 0.9712 & 0.1441 & 0.2165 & +0.1441 \\
+metal_nut & Patchcore & 0.9961 & 0.0604 & 0.0759 & +0.0604 \\
+\bottomrule
+\end{tabular}
+\end{table*}

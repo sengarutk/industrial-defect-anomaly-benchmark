@@ -2,14 +2,13 @@ import argparse
 import os
 import sys
 import time
-
-# Ensure repository root is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from typing import List
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
+
+# Ensure repository root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.utils import seed_everything
 from src.mvtec import MVTecTrainNormal
@@ -35,25 +34,35 @@ def get_model(method_name: str, device: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Master Multi-Seed Benchmark Runner")
-    parser.add_argument("--categories", nargs="+", default=["bottle", "cable", "hazelnut", "metal_nut"])
+    parser.add_argument("--categories", nargs="+", default=["bottle", "cable", "hazelnut", "metal_nut", "carpet"])
     parser.add_argument("--methods", nargs="+", default=["patchcore", "padim", "autoencoder"])
-    parser.add_argument("--seeds", nargs="+", type=int, default=[42, 43, 44])
+    parser.add_argument("--seeds", nargs="+", type=int, default=[42, 123, 2026])
     parser.add_argument("--data-root", type=str, default="data/mvtec_ad")
-    parser.add_argument("--output-dir", type=str, default="results")
+    parser.add_argument("--output-dir", type=str, default=None)
     parser.add_argument("--run-robustness", action="store_true", default=True)
     parser.add_argument("--run-profiling", action="store_true", default=True)
     parser.add_argument("--batch-size", type=int, default=4)
     args = parser.parse_args()
 
+    # Determine default output directory based on dataset root
+    if args.output_dir is None:
+        if "synthetic" in args.data_root.lower() or "mock" in args.data_root.lower():
+            args.output_dir = "results/synthetic_validation"
+        else:
+            args.output_dir = "results/mvtec_ad"
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     tables_dir = os.path.join(args.output_dir, "tables")
+    figures_dir = os.path.join(args.output_dir, "figures")
     os.makedirs(tables_dir, exist_ok=True)
+    os.makedirs(figures_dir, exist_ok=True)
     master_csv_path = os.path.join(tables_dir, "runs_master.csv")
 
-    profiler = CUDAPerformanceProfiler(warmup_runs=10, active_runs=50)
+    profiler = CUDAPerformanceProfiler(warmup_runs=50, active_runs=300, device=device)
 
     rows = []
     print(f"=== Starting Benchmark on Device: {device} ===")
+    print(f"Output Directory: {args.output_dir}")
     print(f"Categories: {args.categories}")
     print(f"Methods: {args.methods}")
     print(f"Seeds: {args.seeds}\n")
@@ -73,11 +82,10 @@ def main():
                 model.fit(train_loader)
                 fit_time_s = time.time() - t0
 
-                # 2. Profile Hardware Latency & VRAM
+                # 2. Dual-Latency Hardware Profiling (T_model & T_e2e)
                 prof_results = {}
                 if args.run_profiling:
-                    sample_in = torch.randn(1, 3, 256, 256, device=device)
-                    prof_results = profiler.profile(lambda inp: model.predict(inp), sample_in)
+                    prof_results = profiler.profile_dual(model, input_shape=(1, 3, 256, 256))
 
                 # 3. Clean Evaluation
                 evaluator = RobustnessEvaluator(model, args.data_root, cat, device=device)
@@ -86,11 +94,14 @@ def main():
                 clean_metrics = evaluator.evaluate_split(test_loader)
 
                 # 4. Robustness Stress-Test
-                mCE_auroc, mCE_aupro = 0.0, 0.0
+                mrd_auroc, mrd_aupro = 0.0, 0.0
+                signed_drop_auroc, signed_drop_aupro = 0.0, 0.0
                 if args.run_robustness:
                     stress_res = evaluator.run_full_stress_test(batch_size=args.batch_size)
-                    mCE_auroc = stress_res["mCE_image_auroc"]
-                    mCE_aupro = stress_res["mCE_aupro"]
+                    mrd_auroc = stress_res["mrd_image_auroc"]
+                    mrd_aupro = stress_res["mrd_aupro"]
+                    signed_drop_auroc = stress_res.get("mean_performance_change_auroc", mrd_auroc)
+                    signed_drop_aupro = stress_res.get("mean_performance_change_aupro", mrd_aupro)
 
                 row = {
                     "timestamp": pd.Timestamp.utcnow().isoformat(),
@@ -105,21 +116,35 @@ def main():
                     "pixel_ap": clean_metrics["pixel_ap"],
                     "aupro": clean_metrics["aupro"],
                     "max_f1": clean_metrics["max_f1"],
+                    "optimal_threshold": clean_metrics.get("optimal_threshold", 0.0),
+                    "oracle_max_f1": clean_metrics["oracle_max_f1"],
+                    "oracle_threshold": clean_metrics["oracle_threshold"],
+                    "precision_at_optimal": clean_metrics.get("precision_at_optimal", 0.0),
+                    "recall_at_optimal": clean_metrics.get("recall_at_optimal", 0.0),
                     "ece": clean_metrics["ece"],
-                    "mCE_image_auroc": mCE_auroc,
-                    "mCE_aupro": mCE_aupro,
-                    "p50_latency_ms": prof_results.get("p50_ms", 0.0),
-                    "p95_latency_ms": prof_results.get("p95_ms", 0.0),
-                    "fps": prof_results.get("fps", 0.0),
+                    "mrd_image_auroc": mrd_auroc,
+                    "mrd_aupro": mrd_aupro,
+                    "mean_performance_change_auroc": signed_drop_auroc,
+                    "mean_performance_change_aupro": signed_drop_aupro,
+                    "mCE_image_auroc": signed_drop_auroc,
+                    "mCE_aupro": signed_drop_aupro,
+                    "p50_model_ms": prof_results.get("p50_model_ms", 0.0),
+                    "p95_model_ms": prof_results.get("p95_model_ms", 0.0),
+                    "fps_model": prof_results.get("fps_model", 0.0),
+                    "p50_e2e_ms": prof_results.get("p50_e2e_ms", 0.0),
+                    "p95_e2e_ms": prof_results.get("p95_e2e_ms", 0.0),
+                    "fps_e2e": prof_results.get("fps_e2e", 0.0),
+                    "p50_latency_ms": prof_results.get("p50_model_ms", 0.0),
+                    "fps": prof_results.get("fps_model", 0.0),
                     "peak_vram_mb": prof_results.get("peak_vram_mb", 0.0),
                 }
                 rows.append(row)
                 df_row = pd.DataFrame([row])
                 write_header = not os.path.exists(master_csv_path)
                 df_row.to_csv(master_csv_path, mode="a", header=write_header, index=False)
-                print(f"    Done: Image AUROC = {row['image_auroc']:.4f} | AU-PRO = {row['aupro']:.4f} | mCE = {row['mCE_image_auroc']:.4f}")
+                print(f"    Done: Image AUROC = {row['image_auroc']:.4f} | AU-PRO = {row['aupro']:.4f} | MRD = {row['mrd_image_auroc']:.4f} | FPS (Model) = {row['fps_model']:.1f}")
 
-    # Generate multi-seed summary table
+    # Multi-seed aggregate summary table
     df_all = pd.DataFrame(rows)
     group_cols = ["category", "method"]
     summary_df = df_all.groupby(group_cols).agg(
@@ -129,10 +154,12 @@ def main():
         aupro_std=("aupro", "std"),
         pixel_auroc_mean=("pixel_auroc", "mean"),
         pixel_auroc_std=("pixel_auroc", "std"),
-        mCE_mean=("mCE_image_auroc", "mean"),
-        mCE_std=("mCE_image_auroc", "std"),
-        p50_latency_ms=("p50_latency_ms", "mean"),
-        fps=("fps", "mean"),
+        mrd_mean=("mrd_image_auroc", "mean"),
+        mrd_std=("mrd_image_auroc", "std"),
+        p50_model_ms=("p50_model_ms", "mean"),
+        p50_e2e_ms=("p50_e2e_ms", "mean"),
+        fps_model=("fps_model", "mean"),
+        fps_e2e=("fps_e2e", "mean"),
         peak_vram_mb=("peak_vram_mb", "mean"),
     ).reset_index()
 

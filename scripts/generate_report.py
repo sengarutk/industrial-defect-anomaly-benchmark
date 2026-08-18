@@ -1,148 +1,163 @@
 import argparse
 import os
 import sys
+import pandas as pd
+import numpy as np
 
 # Ensure repository root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import pandas as pd
-import numpy as np
 
-
-def generate_latex_main_results(df: pd.DataFrame, out_path: str):
-    latex_content = [
-        r"\begin{table*}[t]",
-        r"\centering",
-        r"\caption{Comprehensive Benchmark Results across MVTec AD categories (mean $\pm$ std across seeds).}",
-        r"\label{tab:main_results}",
-        r"\begin{tabular}{llcccc}",
-        r"\toprule",
-        r"\textbf{Method} & \textbf{Category} & \textbf{Image AUROC} ($\uparrow$) & \textbf{Pixel AUROC} ($\uparrow$) & \textbf{AU-PRO} ($\uparrow$) & \textbf{Optimal $F_1$} ($\uparrow$) \\",
-        r"\midrule"
+def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
+    os.makedirs(os.path.dirname(output_tex), exist_ok=True)
+    lines = [
+        "\\begin{table*}[t]",
+        "\\centering",
+        "\\small",
+        "\\caption{Multi-Seed Benchmark Evaluation on Representative MVTec AD Categories (Mean $\\pm$ Std over 3 seeds).}",
+        "\\label{tab:mvtec_main_results}",
+        "\\begin{tabular}{llcccc}",
+        "\\toprule",
+        "\\textbf{Category} & \\textbf{Method} & \\textbf{Image AUROC} $\\uparrow$ & \\textbf{Pixel AUROC} $\\uparrow$ & \\textbf{Localization AU-PRO} $\\uparrow$ & \\textbf{Non-Neg MRD} $\\downarrow$ \\\\",
+        "\\midrule"
     ]
 
-    for _, row in df.iterrows():
-        m = str(row.get("method", "PatchCore")).upper()
-        c = str(row.get("category", "Bottle")).capitalize()
-        img_auc = row.get("image_auroc_mean", row.get("image_auroc", 0.95))
-        pix_auc = row.get("pixel_auroc_mean", row.get("pixel_auroc", 0.96))
-        aupro = row.get("aupro_mean", row.get("aupro", 0.92))
-        f1 = row.get("max_f1", 0.93)
-        latex_content.append(f"{m} & {c} & {img_auc:.4f} & {pix_auc:.4f} & {aupro:.4f} & {f1:.4f} \\")
+    cats = sorted(summary_df["category"].unique())
+    for cat in cats:
+        cat_df = summary_df[summary_df["category"] == cat]
+        for _, row in cat_df.iterrows():
+            method_name = row["method"].capitalize()
+            img_auroc = f"{row.get('image_auroc_mean', 0.0):.4f} \\pm {row.get('image_auroc_std', 0.0):.4f}"
+            pix_auroc = f"{row.get('pixel_auroc_mean', 0.0):.4f} \\pm {row.get('pixel_auroc_std', 0.0):.4f}"
+            aupro = f"{row.get('aupro_mean', 0.0):.4f} \\pm {row.get('aupro_std', 0.0):.4f}"
+            mrd = f"{row.get('mrd_mean', 0.0):.4f} \\pm {row.get('mrd_std', 0.0):.4f}"
+            lines.append(f"{cat} & {method_name} & ${img_auroc}$ & ${pix_auroc}$ & ${aupro}$ & ${mrd}$ \\\\")
+        lines.append("\\midrule")
 
-    latex_content.extend([
-        r"\bottomrule",
-        r"\end{tabular}",
-        r"\end{table*}"
+    if lines[-1] == "\\midrule":
+        lines.pop()
+
+    lines.extend([
+        "\\bottomrule",
+        "\\end{tabular}",
+        "\\end{table*}"
     ])
 
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(latex_content))
+    with open(output_tex, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"✅ Generated: {output_tex}")
 
 
-def generate_latex_profiling(df: pd.DataFrame, out_path: str):
-    latex_content = [
-        r"\begin{table}[h]",
-        r"\centering",
-        r"\caption{Synchronized Hardware Latency and Memory Profiling (Batch Size = 1).}",
-        r"\label{tab:deployment_profiling}",
-        r"\begin{tabular}{lcccc}",
-        r"\toprule",
-        r"\textbf{Method} & \textbf{P50 Latency (ms)} & \textbf{P95 Latency (ms)} & \textbf{FPS} & \textbf{Peak VRAM (MB)} \\",
-        r"\midrule",
-        r"\textbf{PatchCore} & 18.42 & 21.05 & 54.3 & 482.1 \\",
-        r"\textbf{PaDiM} & 10.15 & 12.30 & 98.5 & 310.4 \\",
-        r"\textbf{ConvAutoencoder} & 5.60 & 6.85 & 178.6 & 145.2 \\",
-        r"\bottomrule",
-        r"\end{tabular}",
-        r"\end{table}"
+def generate_deployment_table(summary_df: pd.DataFrame, output_tex: str):
+    os.makedirs(os.path.dirname(output_tex), exist_ok=True)
+    lines = [
+        "\\begin{table}[t]",
+        "\\centering",
+        "\\small",
+        "\\caption{Synchronized Dual-Latency Profiling and Peak VRAM Profile ($B=1$, ResNet-18 Backbone).}",
+        "\\label{tab:deployment_profiling}",
+        "\\begin{tabular}{lcccc}",
+        "\\toprule",
+        "\\textbf{Method} & \\textbf{$P50\\ T_{\\text{model}}$ (ms)} & \\textbf{FPS$_{\\text{model}}$} & \\textbf{$P50\\ T_{\\text{e2e}}$ (ms)} & \\textbf{Peak VRAM (MB)} \\\\",
+        "\\midrule"
     ]
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(latex_content))
+
+    method_groups = summary_df.groupby("method").agg({
+        "p50_model_ms": "mean",
+        "fps_model": "mean",
+        "p50_e2e_ms": "mean",
+        "peak_vram_mb": "mean"
+    }).reset_index()
+
+    for _, row in method_groups.iterrows():
+        m_name = row["method"].capitalize()
+        p50_m = f"{row.get('p50_model_ms', 0.0):.2f}"
+        fps_m = f"{row.get('fps_model', 0.0):.1f}"
+        p50_e = f"{row.get('p50_e2e_ms', 0.0):.2f}"
+        vram = f"{row.get('peak_vram_mb', 0.0):.1f}"
+        lines.append(f"{m_name} & {p50_m} & {fps_m} & {p50_e} & {vram} \\\\")
+
+    lines.extend([
+        "\\bottomrule",
+        "\\end{tabular}",
+        "\\end{table}"
+    ])
+
+    with open(output_tex, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"✅ Generated: {output_tex}")
 
 
-def generate_latex_robustness(out_path: str):
-    latex_content = [
-        r"\begin{table}[h]",
-        r"\centering",
-        r"\caption{Out-of-Distribution Robustness Degradation across 18 Industrial Corruption Conditions.}",
-        r"\label{tab:robustness_mce}",
-        r"\begin{tabular}{lcccc}",
-        r"\toprule",
-        r"\textbf{Method} & \textbf{Clean AUROC} & \textbf{Clean AU-PRO} & \textbf{mCE AUROC} ($\downarrow$) & \textbf{mCE AU-PRO} ($\downarrow$) \\",
-        r"\midrule",
-        r"\textbf{PatchCore} & 0.9850 & 0.9520 & 0.0842 & 0.0915 \\",
-        r"\textbf{PaDiM} & 0.9120 & 0.8840 & 0.1260 & 0.1410 \\",
-        r"\textbf{ConvAutoencoder} & 0.7450 & 0.6810 & 0.2150 & 0.2380 \\",
-        r"\bottomrule",
-        r"\end{tabular}",
-        r"\end{table}"
+def generate_robustness_table(runs_df: pd.DataFrame, output_tex: str):
+    os.makedirs(os.path.dirname(output_tex), exist_ok=True)
+    lines = [
+        "\\begin{table*}[t]",
+        "\\centering",
+        "\\small",
+        "\\caption{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions.}",
+        "\\label{tab:robustness_mrd_mpc}",
+        "\\begin{tabular}{llcccc}",
+        "\\toprule",
+        "\\textbf{Category} & \\textbf{Method} & \\textbf{Clean AUROC} & \\textbf{Non-Neg MRD (AUROC)} $\\downarrow$ & \\textbf{Non-Neg MRD (AU-PRO)} $\\downarrow$ & \\textbf{Signed MPC (AUROC)} $\\Delta$ \\\\",
+        "\\midrule"
     ]
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(latex_content))
 
+    if "category" in runs_df.columns and "method" in runs_df.columns:
+        cats = sorted(runs_df["category"].unique())
+        for cat in cats:
+            c_df = runs_df[runs_df["category"] == cat]
+            methods = sorted(c_df["method"].unique())
+            for m in methods:
+                m_df = c_df[c_df["method"] == m]
+                clean_auroc = m_df["image_auroc"].mean()
+                mrd_auroc = m_df.get("mrd_image_auroc", pd.Series([0.0])).mean()
+                mrd_aupro = m_df.get("mrd_aupro", pd.Series([0.0])).mean()
+                mpc_auroc = m_df.get("mean_performance_change_auroc", pd.Series([mrd_auroc])).mean()
 
-def generate_markdown_report(out_path: str):
-    content = """# Flagship Benchmark Report: Industrial Visual Anomaly Detection
+                lines.append(
+                    f"{cat} & {m.capitalize()} & {clean_auroc:.4f} & {mrd_auroc:.4f} & {mrd_aupro:.4f} & {mpc_auroc:+.4f} \\\\"
+                )
+            lines.append("\\midrule")
 
-## Executive Summary
-This document summarizes benchmark findings across production visual anomaly detectors evaluated on the MVTec Anomaly Detection dataset.
+    if lines[-1] == "\\midrule":
+        lines.pop()
 
-### Core Metrics & Key Findings
-1. **PatchCore** achieves superior localization AU-PRO and Image AUROC across structured categories (`bottle`, `hazelnut`, `metal_nut`).
-2. **PaDiM** provides optimal throughput-accuracy balance ($98.5$ FPS) with minimal memory footprint.
-3. **Convolutional Autoencoders** achieve the highest inference speed ($178.6$ FPS) but suffer under high-frequency texture defects.
+    lines.extend([
+        "\\bottomrule",
+        "\\end{tabular}",
+        "\\end{table*}"
+    ])
 
-## Publication Figures
-- **Pareto Tradeoff:** `results/figures/pareto_latency_vs_aupro.png`
-- **Robustness Heatmap:** `results/figures/robustness_heatmap.png`
-- **Uncertainty Calibration:** `results/figures/calibration_diagram.png`
-- **Ablation Study:** `results/figures/robust_training_ablation.png`
-
-## LaTeX Tables
-Generated booktabs tables are available under `results/tables/`:
-- `main_results.tex`
-- `deployment_profiling.tex`
-- `robustness_mCE.tex`
-"""
-    with open(out_path, "w", encoding="utf-8") as f:
-        f.write(content)
+    with open(output_tex, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"✅ Generated: {output_tex}")
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--tables-dir", type=str, default="results/tables")
+    parser = argparse.ArgumentParser(description="Publication LaTeX and Markdown Report Generator")
+    parser.add_argument("--tables-dir", type=str, default="results/mvtec_ad/tables")
     parser.add_argument("--docs-dir", type=str, default="docs")
     args = parser.parse_args()
 
-    os.makedirs(args.tables_dir, exist_ok=True)
-    os.makedirs(args.docs_dir, exist_ok=True)
-
     summary_csv = os.path.join(args.tables_dir, "summary_multiseed.csv")
-    if os.path.exists(summary_csv):
-        df = pd.read_csv(summary_csv)
-    else:
-        df = pd.DataFrame([
-            {"method": "patchcore", "category": "bottle", "image_auroc_mean": 0.998, "pixel_auroc_mean": 0.985, "aupro_mean": 0.962, "max_f1": 0.99},
-            {"method": "padim", "category": "bottle", "image_auroc_mean": 0.991, "pixel_auroc_mean": 0.978, "aupro_mean": 0.941, "max_f1": 0.98},
-            {"method": "autoencoder", "category": "bottle", "image_auroc_mean": 0.812, "pixel_auroc_mean": 0.840, "aupro_mean": 0.720, "max_f1": 0.80}
-        ])
+    runs_csv = os.path.join(args.tables_dir, "runs_master.csv")
 
-    tex_main = os.path.join(args.tables_dir, "main_results.tex")
-    tex_prof = os.path.join(args.tables_dir, "deployment_profiling.tex")
-    tex_rob = os.path.join(args.tables_dir, "robustness_mCE.tex")
-    md_rep = os.path.join(args.docs_dir, "benchmark_report.md")
+    if not os.path.exists(summary_csv) or not os.path.exists(runs_csv):
+        print(f"Warning: Missing summary or runs CSV in {args.tables_dir}. Generating minimal report.")
+        return
 
-    generate_latex_main_results(df, tex_main)
-    generate_latex_profiling(df, tex_prof)
-    generate_latex_robustness(tex_rob)
-    generate_markdown_report(md_rep)
+    summary_df = pd.read_csv(summary_csv)
+    runs_df = pd.read_csv(runs_csv)
 
-    print("✅ Generated LaTeX & Markdown reports:")
-    print(f"  -> {tex_main}")
-    print(f"  -> {tex_prof}")
-    print(f"  -> {tex_rob}")
-    print(f"  -> {md_rep}")
+    main_tex = os.path.join(args.tables_dir, "main_results.tex")
+    deploy_tex = os.path.join(args.tables_dir, "deployment_profiling.tex")
+    robustness_tex = os.path.join(args.tables_dir, "robustness_mrd_mpc.tex")
+
+    generate_main_results_table(summary_df, main_tex)
+    generate_deployment_table(summary_df, deploy_tex)
+    generate_robustness_table(runs_df, robustness_tex)
+
+    print("\n✅ Generated LaTeX reports successfully.")
 
 
 if __name__ == "__main__":

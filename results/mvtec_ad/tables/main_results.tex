@@ -1,0 +1,31 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Multi-Seed Benchmark Evaluation on Representative MVTec AD Categories (Mean $\pm$ Std over 3 seeds).}
+\label{tab:mvtec_main_results}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Category} & \textbf{Method} & \textbf{Image AUROC} $\uparrow$ & \textbf{Pixel AUROC} $\uparrow$ & \textbf{Localization AU-PRO} $\uparrow$ & \textbf{Non-Neg MRD} $\downarrow$ \\
+\midrule
+bottle & Autoencoder & $0.5053 \pm 0.0076$ & $0.7081 \pm 0.0378$ & $0.4615 \pm 0.0073$ & $-0.1261 \pm 0.0273$ \\
+bottle & Padim & $0.9970 \pm 0.0000$ & $0.9548 \pm 0.0000$ & $0.8666 \pm 0.0000$ & $0.0977 \pm 0.0025$ \\
+bottle & Patchcore & $1.0000 \pm 0.0000$ & $0.9617 \pm 0.0000$ & $0.8725 \pm 0.0000$ & $0.0284 \pm 0.0007$ \\
+\midrule
+cable & Autoencoder & $0.4516 \pm 0.0047$ & $0.5709 \pm 0.0195$ & $0.3810 \pm 0.0277$ & $-0.0193 \pm 0.0043$ \\
+cable & Padim & $0.8617 \pm 0.0000$ & $0.9683 \pm 0.0000$ & $0.9076 \pm 0.0000$ & $0.0238 \pm 0.0004$ \\
+cable & Patchcore & $0.9903 \pm 0.0000$ & $0.9858 \pm 0.0000$ & $0.9427 \pm 0.0000$ & $0.0535 \pm 0.0003$ \\
+\midrule
+carpet & Autoencoder & $0.3904 \pm 0.0052$ & $0.7588 \pm 0.0093$ & $0.4523 \pm 0.0205$ & $-0.0284 \pm 0.0115$ \\
+carpet & Padim & $0.9639 \pm 0.0000$ & $0.9874 \pm 0.0000$ & $0.9549 \pm 0.0000$ & $0.0745 \pm 0.0012$ \\
+carpet & Patchcore & $0.9843 \pm 0.0000$ & $0.9896 \pm 0.0000$ & $0.9492 \pm 0.0000$ & $0.0378 \pm 0.0004$ \\
+\midrule
+hazelnut & Autoencoder & $0.7354 \pm 0.0476$ & $0.9766 \pm 0.0050$ & $0.9000 \pm 0.0127$ & $-0.0217 \pm 0.0133$ \\
+hazelnut & Padim & $0.8404 \pm 0.0000$ & $0.9829 \pm 0.0000$ & $0.9042 \pm 0.0000$ & $-0.0118 \pm 0.0033$ \\
+hazelnut & Patchcore & $0.9996 \pm 0.0000$ & $0.9871 \pm 0.0000$ & $0.9188 \pm 0.0000$ & $0.0046 \pm 0.0000$ \\
+\midrule
+metal_nut & Autoencoder & $0.3047 \pm 0.0501$ & $0.6300 \pm 0.1110$ & $0.3650 \pm 0.0785$ & $-0.0810 \pm 0.0502$ \\
+metal_nut & Padim & $0.9712 \pm 0.0000$ & $0.9692 \pm 0.0000$ & $0.9173 \pm 0.0000$ & $0.1441 \pm 0.0039$ \\
+metal_nut & Patchcore & $0.9961 \pm 0.0000$ & $0.9840 \pm 0.0000$ & $0.9371 \pm 0.0000$ & $0.0604 \pm 0.0006$ \\
+\bottomrule
+\end{tabular}
+\end{table*}

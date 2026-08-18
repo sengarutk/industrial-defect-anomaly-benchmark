@@ -1,151 +1,125 @@
 import warnings
-from typing import Union, List, Tuple
+from typing import Dict, Any, Tuple
 import numpy as np
-import scipy.ndimage
+from scipy.ndimage import label
 from sklearn.metrics import roc_auc_score, average_precision_score
 
 
-def compute_pixel_auroc(masks: np.ndarray, amaps: np.ndarray) -> float:
-    """
-    Computes pixel-level Area Under the ROC curve.
-    masks: binary ground truth masks [N, H, W] or [H, W] in {0, 1}
-    amaps: continuous anomaly maps [N, H, W] or [H, W]
-    """
-    y_true = np.asarray(masks).flatten().astype(int)
-    y_score = np.asarray(amaps).flatten().astype(float)
+def compute_pixel_auroc(ground_truth_masks: np.ndarray, anomaly_maps: np.ndarray) -> float:
+    gt_flat = ground_truth_masks.astype(int).ravel()
+    amap_flat = anomaly_maps.ravel()
 
-    if len(np.unique(y_true)) < 2:
+    unique_classes = np.unique(gt_flat)
+    if len(unique_classes) < 2:
         warnings.warn("compute_pixel_auroc: Ground truth contains only one class. Returning 0.5.")
         return 0.5
 
-    try:
-        score = float(roc_auc_score(y_true, y_score))
-        return score
-    except ValueError:
-        return 0.5
+    return float(roc_auc_score(gt_flat, amap_flat))
 
 
-def compute_pixel_ap(masks: np.ndarray, amaps: np.ndarray) -> float:
-    """
-    Computes pixel-level Average Precision (AP / PR-AUC).
-    masks: binary ground truth masks [N, H, W] or [H, W] in {0, 1}
-    amaps: continuous anomaly maps [N, H, W] or [H, W]
-    """
-    y_true = np.asarray(masks).flatten().astype(int)
-    y_score = np.asarray(amaps).flatten().astype(float)
+def compute_pixel_ap(ground_truth_masks: np.ndarray, anomaly_maps: np.ndarray) -> float:
+    gt_flat = ground_truth_masks.astype(int).ravel()
+    amap_flat = anomaly_maps.ravel()
 
-    if len(np.unique(y_true)) < 2:
+    unique_classes = np.unique(gt_flat)
+    if len(unique_classes) < 2:
         warnings.warn("compute_pixel_ap: Ground truth contains only one class. Returning 0.0.")
         return 0.0
 
-    try:
-        score = float(average_precision_score(y_true, y_score))
-        return score
-    except ValueError:
-        return 0.0
+    return float(average_precision_score(gt_flat, amap_flat))
 
 
 def compute_aupro(
-    masks: np.ndarray,
-    amaps: np.ndarray,
+    ground_truth_masks: np.ndarray,
+    anomaly_maps: np.ndarray,
     max_fpr: float = 0.30,
-    num_thresholds: int = 100
+    num_thresholds: int = 200
 ) -> float:
     """
-    Computes the official MVTec AD Per-Region Overlap (AU-PRO) metric for structural defect localization.
-
-    Protocol:
-      1. Extract all individual connected defect components from the ground truth masks using scipy.ndimage.label.
-      2. Scan threshold candidates from slightly above max(amap) to min(amap).
-      3. For each threshold, binarize prediction, calculate global False Positive Rate over normal pixels,
-         and calculate mean overlap across all connected defect components.
-      4. Filter points to FPR <= max_fpr (default 0.30), interpolate at max_fpr, and integrate normalized area.
+    Per-Region Overlap (AU-PRO) implementation following the MVTec-style evaluation protocol up to a maximum FPR of 0.30.
+    Traverses the threshold descent trajectory and integrates area under PRO curve strictly over normal pixels up to max_fpr.
     """
-    masks_arr = np.asarray(masks)
-    amaps_arr = np.asarray(amaps)
+    N = ground_truth_masks.shape[0]
+    gt_masks = (ground_truth_masks > 0.5).astype(np.uint8)
+    amaps = anomaly_maps.astype(np.float64)
 
-    # Standardize dimensions to [N, H, W]
-    if masks_arr.ndim == 2:
-        masks_arr = masks_arr[np.newaxis, ...]
-        amaps_arr = amaps_arr[np.newaxis, ...]
-    elif masks_arr.ndim == 4 and masks_arr.shape[1] == 1:
-        masks_arr = np.squeeze(masks_arr, axis=1)
-        amaps_arr = np.squeeze(amaps_arr, axis=1)
-
-    masks_bin = (masks_arr > 0.5).astype(np.uint8)
-    N, H, W = masks_bin.shape
-
-    # 1. Extract connected components for each image
-    components: List[Tuple[int, np.ndarray, int]] = []
+    # 1. Connected components identification
+    components = []
     for i in range(N):
-        labeled_mask, num_features = scipy.ndimage.label(masks_bin[i])
-        for f in range(1, num_features + 1):
-            comp_mask = (labeled_mask == f)
-            area = int(np.sum(comp_mask))
-            if area > 0:
-                components.append((i, comp_mask, area))
+        mask_i = gt_masks[i]
+        if np.sum(mask_i) == 0:
+            continue
+        labeled_mask, num_features = label(mask_i)
+        for comp_id in range(1, num_features + 1):
+            comp_pixels = (labeled_mask == comp_id)
+            comp_size = np.sum(comp_pixels)
+            if comp_size > 0:
+                components.append((i, comp_pixels, comp_size))
 
     if len(components) == 0:
         warnings.warn("compute_aupro: No defect components found in masks. Returning 0.0.")
         return 0.0
 
-    total_normal_pixels = np.sum(1 - masks_bin)
+    total_normal_pixels = float(np.sum(1 - gt_masks))
     if total_normal_pixels == 0:
-        warnings.warn("compute_aupro: No normal pixels found in masks. Returning 0.0.")
+        warnings.warn("compute_aupro: No normal background pixels found. Returning 0.0.")
         return 0.0
 
-    # 2. Threshold candidates (sample from max_val + eps down to min_val)
-    min_val = float(np.min(amaps_arr))
-    max_val = float(np.max(amaps_arr))
-    eps = (max_val - min_val) * 1e-4 if max_val > min_val else 1e-6
-
-    if min_val == max_val:
-        thresholds = np.array([max_val + eps, min_val])
+    # 2. Extract adaptive thresholds in descending order
+    unique_vals = np.unique(amaps)
+    if len(unique_vals) <= num_thresholds:
+        thresholds = np.sort(unique_vals)[::-1]
     else:
-        thresholds = np.linspace(max_val + eps, min_val, num_thresholds)
+        percentiles = np.linspace(100, 0, num_thresholds)
+        thresholds = np.percentile(amaps, percentiles)
+        thresholds = np.unique(thresholds)[::-1]
 
-    fpr_list: List[float] = []
-    pro_list: List[float] = []
+    # Prepend threshold above max to anchor (FPR=0, PRO=0)
+    thresholds = np.concatenate([[float(thresholds[0]) + 1e-5], thresholds])
 
-    # 3. Evaluate each threshold
-    for thresh in thresholds:
-        pred = (amaps_arr >= thresh)
-        fp_count = np.sum(pred & (masks_bin == 0))
-        fpr = float(fp_count / (total_normal_pixels + 1e-8))
+    fpr_list = [0.0]
+    pro_list = [0.0]
 
-        overlaps = [
-            np.sum(pred[img_idx] & comp_mask) / area
-            for img_idx, comp_mask, area in components
-        ]
-        pro = float(np.mean(overlaps))
+    for th in thresholds:
+        binary_pred = (amaps >= th).astype(np.uint8)
+
+        fp_pixels = float(np.sum(binary_pred * (1 - gt_masks)))
+        fpr = fp_pixels / total_normal_pixels
+
+        pro_vals = []
+        for img_idx, comp_pixels, comp_size in components:
+            inter = float(np.sum(binary_pred[img_idx] * comp_pixels))
+            pro_vals.append(inter / comp_size)
+        mean_pro = float(np.mean(pro_vals))
 
         fpr_list.append(fpr)
-        pro_list.append(pro)
+        pro_list.append(mean_pro)
 
-    # 4. Sort points by FPR ascending, then PRO ascending
-    sorted_pairs = sorted(zip(fpr_list, pro_list), key=lambda x: (x[0], x[1]))
-    all_fprs = [p[0] for p in sorted_pairs]
-    all_pros = [p[1] for p in sorted_pairs]
+    # 3. Process trajectory segments up to max_fpr
+    clipped_fprs = [0.0]
+    clipped_pros = [0.0]
 
-    # Prepend (0, 0) if necessary
-    if all_fprs[0] > 0.0:
-        all_fprs.insert(0, 0.0)
-        all_pros.insert(0, 0.0)
+    for i in range(1, len(fpr_list)):
+        f_prev, p_prev = fpr_list[i - 1], pro_list[i - 1]
+        f_curr, p_curr = fpr_list[i], pro_list[i]
 
-    # Filter points where FPR <= max_fpr
-    valid_indices = [i for i, f in enumerate(all_fprs) if f <= max_fpr]
-    filtered_fprs = [all_fprs[i] for i in valid_indices]
-    filtered_pros = [all_pros[i] for i in valid_indices]
+        if f_curr <= max_fpr:
+            clipped_fprs.append(f_curr)
+            clipped_pros.append(p_curr)
+        else:
+            # Crosses max_fpr: interpolate exact intercept
+            if f_curr > f_prev:
+                p_interp = p_prev + (p_curr - p_prev) * (max_fpr - f_prev) / (f_curr - f_prev)
+            else:
+                p_interp = p_prev
+            clipped_fprs.append(max_fpr)
+            clipped_pros.append(p_interp)
+            break
 
-    if len(filtered_fprs) == 0:
-        return 0.0
+    if clipped_fprs[-1] < max_fpr:
+        clipped_fprs.append(max_fpr)
+        clipped_pros.append(clipped_pros[-1])
 
-    if filtered_fprs[-1] < max_fpr:
-        interp_pro = float(np.interp(max_fpr, all_fprs, all_pros))
-        filtered_fprs.append(max_fpr)
-        filtered_pros.append(interp_pro)
-
-    # 5. Integrate normalized area under curve
-    area = np.trapz(filtered_pros, filtered_fprs)
-    aupro = float(area / max_fpr)
-    return float(np.clip(aupro, 0.0, 1.0))
+    # Trapezoidal integration normalized by max_fpr
+    aupro_val = np.trapz(clipped_pros, clipped_fprs) / max_fpr
+    return float(np.clip(aupro_val, 0.0, 1.0))
