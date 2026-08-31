@@ -1,3 +1,8 @@
-from .robust_training import AugmentedNormalDataset, RobustTrainingExperiment
+﻿from .robust_training import AugmentedNormalDataset, RobustTrainingExperiment
+from .operational_eval import ProductionStreamSimulator
 
-__all__ = ["AugmentedNormalDataset", "RobustTrainingExperiment"]
+__all__ = [
+    "AugmentedNormalDataset",
+    "RobustTrainingExperiment",
+    "ProductionStreamSimulator"
+]

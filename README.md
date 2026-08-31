@@ -1,59 +1,45 @@
-# Reliable Industrial Visual Anomaly Detection Benchmark
+﻿# Reliable Industrial Visual Anomaly Detection Benchmark
 
-[![CI Test Suite](https://img.shields.io/badge/pytest-22%20passed-brightgreen.svg)](https://github.com/sengarutk/industrial-defect-anomaly-benchmark)
+[![CI Test Suite](https://img.shields.io/badge/pytest-37%20passed-brightgreen.svg)](https://github.com/sengarutk/industrial-defect-anomaly-benchmark)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 [![PyTorch 2.x](https://img.shields.io/badge/PyTorch-2.x-red.svg)](https://pytorch.org/)
-[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/sengarutk/industrial-defect-anomaly-benchmark)
+[![Coverage](https://img.shields.io/badge/coverage-83%25-brightgreen.svg)](https://github.com/sengarutk/industrial-defect-anomaly-benchmark)
 
-A reproducible PyTorch benchmark evaluating **PatchCore-inspired**, **PaDiM-inspired**, and **Reconstruction-based** visual anomaly detectors across five MVTec AD categories, measuring structural localization ($AU\text{-}PRO$ at $\text{FPR} \le 0.30$), synchronized dual-latency hardware profiling, and an 18-condition physical corruption stress test.
+A reproducible research benchmark evaluating **PatchCore-inspired**, **PaDiM-inspired**, and **Reconstruction-based** visual anomaly detectors across five MVTec AD categories, measuring structural localization ($AU\text{-}PRO$ at $\text{FPR} \le 0.30$), synchronized dual-latency hardware profiling, an 18-condition physical corruption stress test, and **operationally-constrained production stream simulations**.
 
-[Benchmark Report](docs/benchmark_report.md) • [Reference Validation](docs/reference-validation.md) • [Raw Run Logs (CSV)](results/mvtec_ad/tables/runs_master.csv) • [Multi-Seed Summary (CSV)](results/mvtec_ad/tables/summary_multiseed.csv) • [LaTeX Tables](results/mvtec_ad/tables/)
-
----
-
-## ⚠️ Limitations & Evaluation Scope
-
-- **Category Scope:** Evaluation covers 5 representative MVTec AD categories (`bottle`, `cable`, `hazelnut`, `metal_nut`, `carpet`), spanning rigid objects, deformable wires, natural shapes, and homogeneous textures—not the full 15 categories.
-- **Environmental Proxies:** The 18 corruption conditions serve as synthetic proxies for optical defocus, conveyor motion blur, lighting loss, high-ISO sensor noise, JPEG compression, and downscaling—not live production-line sensors.
-- **Hardware Latency Boundary:** Latencies are measured on an NVIDIA RTX GPU at $256 \times 256$ with batch size $B=1$; they reflect PyTorch CUDA execution rather than embedded Jetson / C++ TensorRT deployment.
-- **Baseline Implementations:** PatchCore and PaDiM are inspired implementations evaluated under documented settings, not official reproductions.
-- **Probability Calibration:** Raw anomaly scores are uncalibrated rank diagnostics and should not be interpreted as posterior defect probabilities.
+[Benchmark Report](docs/benchmark_report.md) • [Reference Validation](docs/reference-validation.md) • [Operational Summary](results/mvtec_ad/tables/operational_results.md) • [Raw Run Logs (CSV)](results/mvtec_ad/tables/runs_master.csv) • [LaTeX Tables](results/mvtec_ad/tables/)
 
 ---
 
-## 🔬 Experimental Protocol at a Glance
-
-- **Dataset:** MVTec AD mirror (`foersben/mvtec-ad` on Hugging Face; $1,324$ train images, $575$ test images, $400$ ground-truth defect masks).
-- **Training Protocol:** Unsupervised (nominal/defect-free images only).
-- **Resolution & Preprocessing:** $256 \times 256$, ImageNet standardization ($\mu=[0.485, 0.456, 0.406], \sigma=[0.229, 0.224, 0.225]$).
-- **Seeds & Multi-Seed Sweeps:** 3 deterministic seeds (`42`, `123`, `2026`) across 5 categories and 3 methods ($45$ total benchmark runs).
-- **Hardware Latency Profiling:** Synchronized CUDA events ($50$ warmup runs, $300$ active runs, batch size $B=1$).
-- **Robustness Stress Test:** 6 camera/lighting corruption types $\times$ 3 severity levels ($18$ conditions), evaluating Mean Performance Change ($\text{MPC}$) and Non-Negative Mean Robustness Degradation ($\text{MRD}$).
+## 🎯 Research Thesis: Beyond AUROC
+Standard anomaly detection benchmarks evaluate ranking quality across the entire ROC spectrum ($AUROC$, $AU\text{-}PRO$). In high-throughput industrial manufacturing, inspection viability is governed by **operator alert capacity** ($\le 5\text{ alarms/1,000 items}$) and **asymmetric escape costs** (where a missed defect costs $10\times\text{--}50\times$ more than a false alert). This benchmark implements a high-throughput production stream simulation framework measuring defect recall under strict alarm budgets and asymmetric cost-weighted error ($\text{CWE}$).
 
 ---
 
-## 📊 Master Benchmark Results (Multi-Seed MVTec AD)
+## 📊 Operational Benchmark Results (Constrained Alarm Budgets & Asymmetric Costs)
 
-| Category | Method | Image AUROC ($\uparrow$) | Pixel AUROC ($\uparrow$) | Localization AU-PRO ($\uparrow$) | P50 $T_{\text{model}}$ (ms) | P50 $T_{\text{e2e}}$ (ms) | Peak VRAM (MB) | Non-Negative MRD ($\downarrow$) |
-|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **bottle** | **PatchCore** | **$1.0000 \pm 0.000$** | **$0.9617 \pm 0.000$** | **$0.8725 \pm 0.000$** | 10.94 ms | 29.89 ms | **205.9 MB** | **$0.0284 \pm 0.001$** |
-| **bottle** | **PaDiM** | $0.9970 \pm 0.000$ | $0.9548 \pm 0.000$ | $0.8666 \pm 0.000$ | 6.25 ms | 25.63 ms | 298.3 MB | $0.0977 \pm 0.002$ |
-| **bottle** | **ConvAutoencoder** | $0.5053 \pm 0.008$ | $0.7081 \pm 0.038$ | $0.4615 \pm 0.007$ | **4.80 ms** | **24.53 ms** | 215.0 MB | $0.0000 \pm 0.000$ |
-| **cable** | **PatchCore** | **$0.9903 \pm 0.000$** | **$0.9858 \pm 0.000$** | **$0.9427 \pm 0.000$** | 11.52 ms | 44.49 ms | **218.8 MB** | **$0.0535 \pm 0.000$** |
-| **cable** | **PaDiM** | $0.8617 \pm 0.000$ | $0.9683 \pm 0.000$ | $0.9076 \pm 0.000$ | 5.95 ms | 40.02 ms | 300.3 MB | **$0.0238 \pm 0.000$** |
-| **cable** | **ConvAutoencoder** | $0.4516 \pm 0.005$ | $0.5709 \pm 0.020$ | $0.3810 \pm 0.028$ | **6.08 ms** | **40.02 ms** | 216.3 MB | $0.0000 \pm 0.000$ |
-| **carpet** | **PatchCore** | **$0.9844 \pm 0.000$** | **$0.9896 \pm 0.000$** | **$0.9492 \pm 0.000$** | 12.82 ms | 45.67 ms | **258.1 MB** | **$0.0378 \pm 0.000$** |
-| **carpet** | **PaDiM** | $0.9639 \pm 0.000$ | $0.9874 \pm 0.000$ | $0.9549 \pm 0.000$ | 6.47 ms | 38.73 ms | 309.1 MB | $0.0745 \pm 0.001$ |
-| **carpet** | **ConvAutoencoder** | $0.3904 \pm 0.005$ | $0.7588 \pm 0.009$ | $0.4523 \pm 0.021$ | **5.83 ms** | **38.64 ms** | 214.9 MB | $0.0000 \pm 0.000$ |
-| **hazelnut** | **PatchCore** | **$0.9996 \pm 0.000$** | **$0.9871 \pm 0.000$** | **$0.9188 \pm 0.000$** | 16.36 ms | 47.15 ms | 336.8 MB | **$0.0046 \pm 0.000$** |
-| **hazelnut** | **PaDiM** | $0.8404 \pm 0.000$ | $0.9829 \pm 0.000$ | $0.9042 \pm 0.000$ | 6.32 ms | 37.34 ms | **325.5 MB** | $0.0000 \pm 0.000$ |
-| **hazelnut** | **ConvAutoencoder** | $0.7354 \pm 0.048$ | $0.9766 \pm 0.005$ | $0.9000 \pm 0.013$ | **6.15 ms** | **36.13 ms** | 214.9 MB | $0.0000 \pm 0.000$ |
-| **metal_nut** | **PatchCore** | **$0.9961 \pm 0.000$** | **$0.9840 \pm 0.000$** | **$0.9371 \pm 0.000$** | 11.61 ms | 26.69 ms | **216.0 MB** | **$0.0604 \pm 0.001$** |
-| **metal_nut** | **PaDiM** | $0.9712 \pm 0.000$ | $0.9692 \pm 0.000$ | $0.9173 \pm 0.000$ | 6.37 ms | 21.88 ms | 299.7 MB | $0.1441 \pm 0.004$ |
-| **metal_nut** | **ConvAutoencoder** | $0.3047 \pm 0.050$ | $0.6300 \pm 0.111$ | $0.3650 \pm 0.079$ | **4.36 ms** | **20.15 ms** | 215.4 MB | $0.0000 \pm 0.000$ |
+Evaluation under strict operator alarm budget ($\le 5\text{ alarms}/1,000$ parts) and $10\times$ missed-defect cost asymmetry ($r = 10$) across 45 multi-seed production streams (95% Bootstrap Confidence Intervals):
 
-*Note: Per-corruption breakdowns and signed performance changes (MPC) are detailed in `docs/benchmark_report.md`.*
+| Category | Method | TPR @ 5 Alarms/1k ($\uparrow$) | Missed Defects / 1k ($\downarrow$) | Cost-Weighted Error ($r=10$) ($\downarrow$) | Overload Prob. $P(\text{Overload})$ ($\downarrow$) |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **Bottle** | **PatchCore** | **$1.000\ [1.000, 1.000]$** | **$0.0\ [0.0, 0.0]$** | **$0.0116\ [0.0116, 0.0116]$** | **$0.367$** |
+| | PaDiM | $0.955\ [0.955, 0.955]$ | $30.3\ [30.3, 30.3]$ | $0.2442\ [0.2442, 0.2442]$ | $0.533$ |
+| | ConvAutoencoder | $0.066\ [0.061, 0.076]$ | $929.3\ [924.2, 939.4]$ | $7.1434\ [7.1047, 7.2209]$ | $0.033$ |
+| **Cable** | **PatchCore** | **$0.859\ [0.859, 0.859]$** | **$130.4\ [130.4, 130.4]$** | **$0.8067\ [0.8067, 0.8067]$** | **$0.000$** |
+| | PaDiM | $0.217\ [0.217, 0.217]$ | $750.0\ [750.0, 750.0]$ | $4.6067\ [4.6067, 4.6067]$ | $0.000$ |
+| | ConvAutoencoder | $0.011\ [0.011, 0.011]$ | $989.1\ [989.1, 989.1]$ | $6.0733\ [6.0733, 6.0733]$ | $0.000$ |
+| **Carpet** | **PatchCore** | **$0.955\ [0.955, 0.955]$** | **$44.9\ [44.9, 44.9]$** | **$0.3504\ [0.3504, 0.3504]$** | **$0.000$** |
+| | PaDiM | $0.798\ [0.798, 0.798]$ | $191.0\ [191.0, 191.0]$ | $1.4615\ [1.4615, 1.4615]$ | $0.000$ |
+| | ConvAutoencoder | $0.000\ [0.000, 0.000]$ | $1000.0\ [1000.0, 1000.0]$ | $7.6154\ [7.6154, 7.6154]$ | $0.000$ |
+| **Hazelnut** | **PatchCore** | **$0.986\ [0.986, 0.986]$** | **$14.3\ [14.3, 14.3]$** | **$0.1000\ [0.1000, 0.1000]$** | **$0.000$** |
+| | PaDiM | $0.071\ [0.071, 0.071]$ | $928.6\ [928.6, 928.6]$ | $5.9182\ [5.9182, 5.9182]$ | $0.000$ |
+| | ConvAutoencoder | $0.352\ [0.343, 0.357]$ | $647.6\ [642.9, 657.1]$ | $4.1303\ [4.1000, 4.1909]$ | $0.000$ |
+| **Metal Nut** | **PatchCore** | **$0.978\ [0.978, 0.978]$** | **$21.5\ [21.5, 21.5]$** | **$0.1826\ [0.1826, 0.1826]$** | **$0.100$** |
+| | PaDiM | $0.602\ [0.602, 0.602]$ | $365.6\ [365.6, 365.6]$ | $2.9652\ [2.9652, 2.9652]$ | $0.133$ |
+| | ConvAutoencoder | $0.000\ [0.000, 0.000]$ | $1000.0\ [1000.0, 1000.0]$ | $8.0957\ [8.0957, 8.0957]$ | $0.000$ |
+
+*Wilcoxon Signed-Rank Test: PatchCore achieves statistically significant superiority over PaDiM ($W=0.0, p = 5.68\times 10^{-14}$) and Autoencoder ($W=0.0, p = 5.68\times 10^{-14}$).*
 
 ---
 
@@ -67,19 +53,30 @@ A reproducible PyTorch benchmark evaluating **PatchCore-inspired**, **PaDiM-insp
 
 ---
 
+## ⚠️ Limitations & Evaluation Scope
+
+- **Category Scope:** Evaluation covers 5 representative MVTec AD categories (`bottle`, `cable`, `hazelnut`, `metal_nut`, `carpet`) spanning rigid objects, deformable wires, natural shapes, and homogeneous textures.
+- **Environmental Proxies:** The 18 corruption conditions serve as synthetic proxies for optical defocus, conveyor motion blur, lighting loss, high-ISO sensor noise, JPEG compression, and downscaling.
+- **Hardware Latency Boundary:** Latencies are measured on an NVIDIA RTX GPU at $256 \times 256$ with batch size $B=1$; they reflect PyTorch CUDA execution rather than embedded Jetson / C++ TensorRT deployment.
+- **Baseline Implementations:** PatchCore and PaDiM are inspired implementations evaluated under documented settings, not official reproductions.
+
+---
+
 ## 🚀 Quick Reproduction
 
 ```bash
-# 1. Run unit test suite
+# 1. Run unit & integration test suite (37 tests)
 pytest --cov=src --cov-report=term-missing tests/ -v
 
 # 2. Download verified MVTec AD category data
 python scripts/download_dataset.py --categories bottle cable hazelnut metal_nut carpet --max-workers 8
 
-# 3. Execute benchmark sweep (45 runs)
-python scripts/run_benchmark.py --categories bottle cable hazelnut metal_nut carpet --methods patchcore padim autoencoder --seeds 42 123 2026
+# 3. Execute master benchmark sweep (45 runs) with score caching
+python scripts/run_benchmark.py --categories bottle cable hazelnut metal_nut carpet --methods patchcore padim autoencoder --seeds 42 123 2026 --save-scores
 
-# 4. Generate publication plots & LaTeX tables
+# 4. Run operational evaluation & generate publication assets
+python scripts/run_operational_eval.py --scores-dir results/mvtec_ad/scores --output-dir results/mvtec_ad
+python scripts/generate_operational_plots.py --scores-dir results/mvtec_ad/scores --output-dir results/mvtec_ad/figures/operational
 python scripts/generate_plots.py --tables-dir results/mvtec_ad/tables --output-dir results/mvtec_ad/figures
 python scripts/generate_report.py --tables-dir results/mvtec_ad/tables --docs-dir docs
 ```
@@ -91,7 +88,7 @@ python scripts/generate_report.py --tables-dir results/mvtec_ad/tables --docs-di
 ```bibtex
 @software{sengar2026industrial,
   author = {Sengar, Utkarsh},
-  title = {Industrial Defect Anomaly Benchmark: Multi-Method Evaluation and Robustness Stress-Testing},
+  title = {Industrial Defect Anomaly Benchmark: Multi-Method Evaluation and Operational Production Simulation},
   year = {2026},
   url = {https://github.com/sengarutk/industrial-defect-anomaly-benchmark}
 }

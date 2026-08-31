@@ -1,8 +1,9 @@
-import argparse
+﻿import argparse
 import os
 import sys
 import time
 from typing import List
+import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
@@ -40,7 +41,12 @@ def main():
     parser.add_argument("--data-root", type=str, default="data/mvtec_ad")
     parser.add_argument("--output-dir", type=str, default=None)
     parser.add_argument("--run-robustness", action="store_true", default=True)
+    parser.add_argument("--no-run-robustness", dest="run_robustness", action="store_false")
     parser.add_argument("--run-profiling", action="store_true", default=True)
+    parser.add_argument("--no-run-profiling", dest="run_profiling", action="store_false")
+    parser.add_argument("--save-scores", action="store_true", default=True, help="Persist .npz score archives")
+    parser.add_argument("--no-save-scores", dest="save_scores", action="store_false")
+    parser.add_argument("--scores-dir", type=str, default=None)
     parser.add_argument("--batch-size", type=int, default=4)
     args = parser.parse_args()
 
@@ -54,15 +60,20 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     tables_dir = os.path.join(args.output_dir, "tables")
     figures_dir = os.path.join(args.output_dir, "figures")
+    scores_dir = args.scores_dir if args.scores_dir is not None else os.path.join(args.output_dir, "scores")
+
     os.makedirs(tables_dir, exist_ok=True)
     os.makedirs(figures_dir, exist_ok=True)
-    master_csv_path = os.path.join(tables_dir, "runs_master.csv")
+    if args.save_scores:
+        os.makedirs(scores_dir, exist_ok=True)
 
+    master_csv_path = os.path.join(tables_dir, "runs_master.csv")
     profiler = CUDAPerformanceProfiler(warmup_runs=50, active_runs=300, device=device)
 
     rows = []
     print(f"=== Starting Benchmark on Device: {device} ===")
     print(f"Output Directory: {args.output_dir}")
+    print(f"Scores Directory: {scores_dir}")
     print(f"Categories: {args.categories}")
     print(f"Methods: {args.methods}")
     print(f"Seeds: {args.seeds}\n")
@@ -87,11 +98,24 @@ def main():
                 if args.run_profiling:
                     prof_results = profiler.profile_dual(model, input_shape=(1, 3, 256, 256))
 
-                # 3. Clean Evaluation
+                # 3. Clean Evaluation & Score Extraction
                 evaluator = RobustnessEvaluator(model, args.data_root, cat, device=device)
                 test_ds = CorruptedMVTecTest(args.data_root, cat, corruption_type=None)
                 test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
-                clean_metrics = evaluator.evaluate_split(test_loader)
+                
+                clean_image_labels, clean_image_scores, clean_gt_masks, clean_pixel_amaps = evaluator.predict_split(test_loader)
+                clean_metrics = evaluator.evaluate_predictions(clean_image_labels, clean_image_scores, clean_gt_masks, clean_pixel_amaps)
+
+                # Persist score archive if enabled
+                if args.save_scores:
+                    score_file = os.path.join(scores_dir, f"{cat}_{method_name}_{seed}.npz")
+                    np.savez_compressed(
+                        score_file,
+                        image_scores=clean_image_scores,
+                        image_labels=clean_image_labels,
+                        pixel_amaps=clean_pixel_amaps.astype(np.float32),
+                        ground_truth_masks=clean_gt_masks.astype(np.float32)
+                    )
 
                 # 4. Robustness Stress-Test
                 mrd_auroc, mrd_aupro = 0.0, 0.0
@@ -142,7 +166,7 @@ def main():
                 df_row = pd.DataFrame([row])
                 write_header = not os.path.exists(master_csv_path)
                 df_row.to_csv(master_csv_path, mode="a", header=write_header, index=False)
-                print(f"    Done: Image AUROC = {row['image_auroc']:.4f} | AU-PRO = {row['aupro']:.4f} | MRD = {row['mrd_image_auroc']:.4f} | FPS (Model) = {row['fps_model']:.1f}")
+                print(f"    Done: Image AUROC = {row['image_auroc']:.4f} | AU-PRO = {row['aupro']:.4f} | MRD = {row['mrd_image_auroc']:.4f}")
 
     # Multi-seed aggregate summary table
     df_all = pd.DataFrame(rows)

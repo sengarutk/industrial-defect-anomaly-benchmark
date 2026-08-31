@@ -1,0 +1,31 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Operational Inspection Benchmark under Constrained Operator Alert Budgets and Asymmetric Escape Costs (95\% Bootstrap Confidence Intervals).}
+\label{tab:operational_results}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Category} & \textbf{Method} & \textbf{TPR @ 5 Alarms/1k} $\uparrow$ & \textbf{MD @ 1k (Escapes)} $\downarrow$ & \textbf{CWE ($r=10$)} $\downarrow$ & \textbf{P(Overload)} $\downarrow$ \\
+\midrule
+bottle & Autoencoder & 0.066 [0.061, 0.076] & 929.3 [924.2, 939.4] & 7.1434 [7.1047, 7.2209] & 0.033 \\
+bottle & Padim & 0.955 [0.955, 0.955] & 30.3 [30.3, 30.3] & 0.2442 [0.2442, 0.2442] & 0.533 \\
+bottle & Patchcore & 1.000 [1.000, 1.000] & 0.0 [0.0, 0.0] & 0.0116 [0.0116, 0.0116] & 0.367 \\
+\midrule
+cable & Autoencoder & 0.011 [0.011, 0.011] & 989.1 [989.1, 989.1] & 6.0733 [6.0733, 6.0733] & 0.000 \\
+cable & Padim & 0.217 [0.217, 0.217] & 750.0 [750.0, 750.0] & 4.6067 [4.6067, 4.6067] & 0.000 \\
+cable & Patchcore & 0.859 [0.859, 0.859] & 130.4 [130.4, 130.4] & 0.8067 [0.8067, 0.8067] & 0.000 \\
+\midrule
+carpet & Autoencoder & 0.000 [0.000, 0.000] & 1000.0 [1000.0, 1000.0] & 7.6154 [7.6154, 7.6154] & 0.000 \\
+carpet & Padim & 0.798 [0.798, 0.798] & 191.0 [191.0, 191.0] & 1.4615 [1.4615, 1.4615] & 0.000 \\
+carpet & Patchcore & 0.955 [0.955, 0.955] & 44.9 [44.9, 44.9] & 0.3504 [0.3504, 0.3504] & 0.000 \\
+\midrule
+hazelnut & Autoencoder & 0.352 [0.343, 0.357] & 647.6 [642.9, 657.1] & 4.1303 [4.1000, 4.1909] & 0.000 \\
+hazelnut & Padim & 0.071 [0.071, 0.071] & 928.6 [928.6, 928.6] & 5.9182 [5.9182, 5.9182] & 0.000 \\
+hazelnut & Patchcore & 0.986 [0.986, 0.986] & 14.3 [14.3, 14.3] & 0.1000 [0.1000, 0.1000] & 0.000 \\
+\midrule
+metal_nut & Autoencoder & 0.000 [0.000, 0.000] & 1000.0 [1000.0, 1000.0] & 8.0957 [8.0957, 8.0957] & 0.000 \\
+metal_nut & Padim & 0.602 [0.602, 0.602] & 365.6 [365.6, 365.6] & 2.9652 [2.9652, 2.9652] & 0.133 \\
+metal_nut & Patchcore & 0.978 [0.978, 0.978] & 21.5 [21.5, 21.5] & 0.1826 [0.1826, 0.1826] & 0.100 \\
+\bottomrule
+\end{tabular}
+\end{table*}

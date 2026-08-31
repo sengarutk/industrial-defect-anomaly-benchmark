@@ -1,6 +1,6 @@
-import os
+﻿import os
 import json
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import torch
@@ -36,7 +36,11 @@ class RobustnessEvaluator:
         self.category = category
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-    def evaluate_split(self, dataloader: DataLoader) -> Dict[str, float]:
+    def predict_split(self, dataloader: DataLoader) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Executes model inference across entire dataloader split, returning:
+        (image_labels, image_scores, ground_truth_masks, pixel_anomaly_maps)
+        """
         all_y: List[int] = []
         all_scores: List[float] = []
         all_masks: List[np.ndarray] = []
@@ -55,11 +59,20 @@ class RobustnessEvaluator:
             all_masks.append(m_np)
             all_amaps.append(amaps)
 
-        y_arr = np.array(all_y)
-        scores_arr = np.array(all_scores)
-        masks_arr = np.concatenate(all_masks, axis=0)
-        amaps_arr = np.concatenate(all_amaps, axis=0)
+        y_arr = np.array(all_y, dtype=int)
+        scores_arr = np.array(all_scores, dtype=float)
+        masks_arr = np.concatenate(all_masks, axis=0) if len(all_masks) > 0 else np.zeros((0, 256, 256), dtype=np.float32)
+        amaps_arr = np.concatenate(all_amaps, axis=0) if len(all_amaps) > 0 else np.zeros((0, 256, 256), dtype=np.float32)
 
+        return y_arr, scores_arr, masks_arr, amaps_arr
+
+    def evaluate_predictions(
+        self,
+        y_arr: np.ndarray,
+        scores_arr: np.ndarray,
+        masks_arr: np.ndarray,
+        amaps_arr: np.ndarray
+    ) -> Dict[str, float]:
         img_auroc = compute_image_auroc(y_arr, scores_arr)
         img_ap = compute_image_ap(y_arr, scores_arr)
         f1_res = compute_optimal_f1(y_arr, scores_arr)
@@ -83,6 +96,10 @@ class RobustnessEvaluator:
             "aupro": aupro_val,
             "ece": ece_val
         }
+
+    def evaluate_split(self, dataloader: DataLoader) -> Dict[str, float]:
+        y_arr, scores_arr, masks_arr, amaps_arr = self.predict_split(dataloader)
+        return self.evaluate_predictions(y_arr, scores_arr, masks_arr, amaps_arr)
 
     def run_full_stress_test(
         self,

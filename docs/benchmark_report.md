@@ -1,4 +1,4 @@
-# Comprehensive Benchmark Report: Industrial Visual Anomaly Detection Under Real-World Degradation
+﻿# Comprehensive Benchmark Report: Industrial Visual Anomaly Detection Under Real-World Degradation
 
 ## 1. Executive Summary & Baseline Implementation Scope
 This report presents an empirical evaluation of visual anomaly detection algorithms on the **MVTec Anomaly Detection (MVTec AD)** dataset under clean nominal conditions and realistic industrial distribution shifts. 
@@ -13,6 +13,7 @@ The evaluation encompasses:
 - **3 Deterministic Random Seeds:** `42`, `123`, `2026` ($45$ experimental benchmark sweeps).
 - **Synchronized Hardware Profiling:** $50$ warmup runs and $300$ active runs measuring model-path latency ($T_{\text{model}}$), end-to-end pipeline latency ($T_{\text{e2e}}$), and peak VRAM.
 - **Physical Robustness Suite:** 6 camera/lighting degradations across 3 severity levels ($18$ conditions).
+- **Operational Production Stream Evaluation:** Realistic defect priors ($1\%, 5\%, 15\%$), asymmetric escape costs ($r \in \{10, 20, 50\}$), operator alert budgets ($\le 5, \le 10$ alarms/1k), and non-parametric bootstrap confidence intervals.
 
 ---
 
@@ -63,3 +64,45 @@ Synchronized measurements on GPU ($B=1$, ResNet-18 backbone):
 - **PatchCore:** $T_{\text{model}} = 12.65\text{ ms}$ ($81.2\text{ FPS}$), $T_{\text{e2e}} = 38.78\text{ ms}$ ($29.3\text{ FPS}$), Peak VRAM = $247.1\text{ MB}$.
 - **PaDiM:** $T_{\text{model}} = 6.27\text{ ms}$ ($160.1\text{ FPS}$), $T_{\text{e2e}} = 32.72\text{ ms}$ ($35.3\text{ FPS}$), Peak VRAM = $306.5\text{ MB}$.
 - **ConvAutoencoder:** $T_{\text{model}} = 5.44\text{ ms}$ ($185.5\text{ FPS}$), $T_{\text{e2e}} = 31.89\text{ ms}$ ($36.2\text{ FPS}$), Peak VRAM = $215.2\text{ MB}$.
+
+---
+
+## 5. Beyond AUROC: Operational Evaluation & Production Stream Analysis
+
+Standard area-under-the-curve metrics evaluate ranking capability across unconstrained threshold spans, including unrealistic operating zones with $50\%$ false alarm rates. In production inspection, two operational constraints dominate:
+1. **Operator Alert Budget:** Human review is limited to a fixed capacity, requiring nominal alarm rates $\le 5\text{ alarms}/1,000$ parts.
+2. **Asymmetric Escape Penalty:** Releasing a defective part costs $r = c_{\text{miss}} / c_{\text{false}} \in [10, 50]\times$ more than an operator false alarm.
+
+### 5.1 Multi-Seed Operational Summary (95% Bootstrap CIs)
+
+Evaluation on 10,000-part simulated production streams with $1\%$ defect prior under $r=10$ cost asymmetry:
+
+| Category | Method | TPR @ 5 Alarms/1k ($\uparrow$) | Missed Defects / 1k ($\downarrow$) | Cost-Weighted Error ($r=10$) ($\downarrow$) | Overload Prob. $P(\text{Overload})$ ($\downarrow$) |
+|:---|:---|:---:|:---:|:---:|:---:|
+| **Bottle** | **PatchCore** | **$1.000\ [1.000, 1.000]$** | **$0.0\ [0.0, 0.0]$** | **$0.0116\ [0.0116, 0.0116]$** | **$0.367$** |
+| | PaDiM | $0.955\ [0.955, 0.955]$ | $30.3\ [30.3, 30.3]$ | $0.2442\ [0.2442, 0.2442]$ | $0.533$ |
+| | ConvAutoencoder | $0.066\ [0.061, 0.076]$ | $929.3\ [924.2, 939.4]$ | $7.1434\ [7.1047, 7.2209]$ | $0.033$ |
+| **Cable** | **PatchCore** | **$0.859\ [0.859, 0.859]$** | **$130.4\ [130.4, 130.4]$** | **$0.8067\ [0.8067, 0.8067]$** | **$0.000$** |
+| | PaDiM | $0.217\ [0.217, 0.217]$ | $750.0\ [750.0, 750.0]$ | $4.6067\ [4.6067, 4.6067]$ | $0.000$ |
+| | ConvAutoencoder | $0.011\ [0.011, 0.011]$ | $989.1\ [989.1, 989.1]$ | $6.0733\ [6.0733, 6.0733]$ | $0.000$ |
+| **Carpet** | **PatchCore** | **$0.955\ [0.955, 0.955]$** | **$44.9\ [44.9, 44.9]$** | **$0.3504\ [0.3504, 0.3504]$** | **$0.000$** |
+| | PaDiM | $0.798\ [0.798, 0.798]$ | $191.0\ [191.0, 191.0]$ | $1.4615\ [1.4615, 1.4615]$ | $0.000$ |
+| | ConvAutoencoder | $0.000\ [0.000, 0.000]$ | $1000.0\ [1000.0, 1000.0]$ | $7.6154\ [7.6154, 7.6154]$ | $0.000$ |
+| **Hazelnut** | **PatchCore** | **$0.986\ [0.986, 0.986]$** | **$14.3\ [14.3, 14.3]$** | **$0.1000\ [0.1000, 0.1000]$** | **$0.000$** |
+| | PaDiM | $0.071\ [0.071, 0.071]$ | $928.6\ [928.6, 928.6]$ | $5.9182\ [5.9182, 5.9182]$ | $0.000$ |
+| | ConvAutoencoder | $0.352\ [0.343, 0.357]$ | $647.6\ [642.9, 657.1]$ | $4.1303\ [4.1000, 4.1909]$ | $0.000$ |
+| **Metal Nut** | **PatchCore** | **$0.978\ [0.978, 0.978]$** | **$21.5\ [21.5, 21.5]$** | **$0.1826\ [0.1826, 0.1826]$** | **$0.100$** |
+| | PaDiM | $0.602\ [0.602, 0.602]$ | $365.6\ [365.6, 365.6]$ | $2.9652\ [2.9652, 2.9652]$ | $0.133$ |
+| | ConvAutoencoder | $0.000\ [0.000, 0.000]$ | $1000.0\ [1000.0, 1000.0]$ | $8.0957\ [8.0957, 8.0957]$ | $0.000$ |
+
+### 5.2 Statistical Significance Analysis
+Two-sided Wilcoxon signed-rank tests across multi-seed production streams confirm statistically significant superiority for PatchCore over competing paradigms:
+- **PatchCore vs. PaDiM (CWE $r=10$):** $W = 0.0,\ p = 5.6843 \times 10^{-14}$
+- **PatchCore vs. Autoencoder (CWE $r=10$):** $W = 0.0,\ p = 5.6843 \times 10^{-14}$
+
+### 5.3 Operational Visualizations
+
+1. **False Alarms vs. Missed Defects Tradeoff (`fa_vs_md_tradeoff.png`):** Shows operating points under strict alert bounds, demonstrating PatchCore's minimal defect escapes relative to PaDiM.
+2. **True Positive Rate vs. Alert Budget (`tpr_vs_alert_budget.png`):** Illustrates defect recall scaling from $1 \to 20\text{ alarms/1k}$, demonstrating why PaDiM fails on complex deformed structures at low budgets.
+3. **Cost-Weighted Error Curves (`cost_weighted_error_curves.png`):** Plots empirical loss across decision cutoffs for $r \in \{10, 20, 50\}$, highlighting the optimal operating window $\tau_{\text{cost}}^*$.
+4. **Operator Review Overload Probability (`operator_review_overload.png`):** Evaluates human reviewer fatigue across defect priors ($1\%, 5\%, 15\%$) for a 60-part review capacity per 1,000-part stream.

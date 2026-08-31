@@ -1,4 +1,4 @@
-import os
+﻿import os
 from typing import Tuple, Optional
 import numpy as np
 import scipy.ndimage
@@ -81,6 +81,21 @@ class ConvAutoencoder(BaseAnomalyDetector):
         """
         Fits autoencoder weights on normal training images.
         """
+        all_tensors = []
+        for batch in dataloader:
+            if isinstance(batch, (list, tuple)):
+                x = batch[0]
+            else:
+                x = batch
+            all_tensors.append(x)
+
+        if len(all_tensors) == 0:
+            return
+
+        data = torch.cat(all_tensors, dim=0).to(self.device)
+        n_samples = data.shape[0]
+        batch_size = 16
+
         self.model.train()
         optimizer = torch.optim.AdamW(
             self.model.parameters(),
@@ -89,16 +104,14 @@ class ConvAutoencoder(BaseAnomalyDetector):
         )
 
         for epoch in range(self.epochs):
-            for batch in dataloader:
-                if isinstance(batch, (list, tuple)):
-                    x = batch[0]
-                else:
-                    x = batch
-                x = x.to(self.device)
+            perm = torch.randperm(n_samples, device=self.device)
+            for i in range(0, n_samples, batch_size):
+                batch_idx = perm[i:i + batch_size]
+                x_batch = data[batch_idx]
 
                 optimizer.zero_grad()
-                reconstruction = self.model(x)
-                loss = self.criterion(reconstruction, x)
+                reconstruction = self.model(x_batch)
+                loss = self.criterion(reconstruction, x_batch)
                 loss.backward()
                 optimizer.step()
 
@@ -117,7 +130,6 @@ class ConvAutoencoder(BaseAnomalyDetector):
 
         with torch.no_grad():
             reconstructed = self.model(x)
-            # Spatial residual map: MSE averaged over 3 color channels -> [B, 256, 256]
             residual = torch.mean((x - reconstructed) ** 2, dim=1).cpu().numpy()
 
         smoothed_amaps = np.zeros_like(residual)
@@ -125,7 +137,6 @@ class ConvAutoencoder(BaseAnomalyDetector):
 
         for b in range(B):
             smoothed_amaps[b] = scipy.ndimage.gaussian_filter(residual[b], sigma=4)
-            # 95th percentile reconstruction error as robust image-level score
             image_scores[b] = float(np.percentile(smoothed_amaps[b], 95))
 
         return image_scores, smoothed_amaps

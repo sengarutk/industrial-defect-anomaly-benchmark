@@ -1,5 +1,5 @@
+﻿from typing import Tuple, List, Optional
 import os
-from typing import Tuple, Optional, List
 import numpy as np
 import scipy.ndimage
 import torch
@@ -13,11 +13,10 @@ from .base import BaseAnomalyDetector
 
 class PatchCore(BaseAnomalyDetector):
     """
-    PatchCore anomaly detector:
-    - Multi-scale intermediate feature extraction (layer2 + layer3 of ResNet-18)
-    - Locally aware spatial neighborhood aggregation via AvgPool2d
-    - Memory-efficient Minimax Greedy Coreset Selection (k-Center Greedy with random projection)
-    - Nearest-neighbor anomaly scoring & spatial Gaussian smoothed heatmap generation
+    PatchCore-inspired Anomaly Detector.
+    Extracts multi-scale locally aware patch features from ResNet-18 (layer2 + layer3),
+    applies Minimax Greedy Coreset Selection to construct an efficient memory bank,
+    and calculates nearest-neighbor patch anomaly distances with 2D Gaussian smoothing.
     """
     def __init__(
         self,
@@ -33,7 +32,6 @@ class PatchCore(BaseAnomalyDetector):
         self.projection_dim = projection_dim
         self.seed = seed
 
-        # Build feature extractor backbone
         if backbone == "resnet18":
             weights = tvm.ResNet18_Weights.IMAGENET1K_V1
             net = tvm.resnet18(weights=weights)
@@ -48,16 +46,9 @@ class PatchCore(BaseAnomalyDetector):
             param.requires_grad = False
 
         self.avg_pool = nn.AvgPool2d(kernel_size=3, stride=1, padding=1)
-        self.memory_bank: Optional[torch.Tensor] = None  # [M, C_total]
+        self.memory_bank: Optional[torch.Tensor] = None
 
     def _extract_multiscale_features(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Extracts multi-scale patch features from layer2 and layer3.
-        For 256x256 input:
-          layer2 -> [B, 128, 32, 32]
-          layer3 -> [B, 256, 16, 16] -> interpolated to [B, 256, 32, 32]
-        Concatenated -> [B, 384, 32, 32] -> permuted & reshaped to [B * 1024, 384].
-        """
         x = x.to(self.device)
         with torch.no_grad():
             x0 = self.net.conv1(x)
@@ -69,70 +60,65 @@ class PatchCore(BaseAnomalyDetector):
             l2 = self.net.layer2(l1)
             l3 = self.net.layer3(l2)
 
-            # Locally aware pooling
             p2 = self.avg_pool(l2)
             p3 = self.avg_pool(l3)
 
-            # Align spatial dimensions to layer2 resolution (32x32 for 256x256 inputs)
             p3_up = F.interpolate(p3, size=p2.shape[2:], mode="bilinear", align_corners=False)
 
-            # Concatenate along channel dimension: [B, C2+C3, H, W]
             features = torch.cat([p2, p3_up], dim=1)
             B, C, H, W = features.shape
 
-            # Permute to [B, H, W, C] and reshape to [B * H * W, C]
             patches = features.permute(0, 2, 3, 1).reshape(B * H * W, C)
             return patches
 
     def _greedy_coreset_subsampling(self, patches: torch.Tensor) -> torch.Tensor:
-        """
-        Minimax Greedy Coreset Selection (k-Center Greedy).
-        Reduces N patch embeddings to M = max(1, int(N * ratio)) representative patch vectors.
-        """
         N, D = patches.shape
         M = max(1, int(N * self.coreset_sampling_ratio))
 
         if M >= N:
             return patches
 
-        # Random projection for fast distance computation during coreset selection
         if D > self.projection_dim:
             g = torch.Generator(device=self.device)
             g.manual_seed(self.seed)
             proj_mat = torch.randn(D, self.projection_dim, device=self.device, generator=g)
-            proj_mat, _ = torch.linalg.qr(proj_mat)  # Orthonormal projection
+            proj_mat, _ = torch.linalg.qr(proj_mat)
             patches_proj = torch.matmul(patches, proj_mat)
         else:
             patches_proj = patches
 
-        # Initialize coreset with the point furthest from the dataset mean
         center = torch.mean(patches_proj, dim=0, keepdim=True)
         init_dists = torch.norm(patches_proj - center, dim=1)
         start_idx = int(torch.argmax(init_dists).item())
 
         selected_indices = [start_idx]
-        min_distances = torch.norm(patches_proj - patches_proj[start_idx:start_idx+1], dim=1)
 
-        # Iterative greedy furthest-point selection
-        batch_chunk = 5000  # Avoid VRAM spikes on large matrix diffs
-        for _ in range(1, M):
-            next_idx = int(torch.argmax(min_distances).item())
-            selected_indices.append(next_idx)
+        patches_sq_norm = torch.sum(patches_proj ** 2, dim=1)
+        start_pt = patches_proj[start_idx]
+        start_sq_norm = torch.sum(start_pt ** 2)
+        dot_start = torch.mv(patches_proj, start_pt)
+        min_distances_sq = torch.clamp(patches_sq_norm + start_sq_norm - 2.0 * dot_start, min=0.0)
 
-            # Update min distances to current coreset
-            query_pt = patches_proj[next_idx:next_idx+1]
-            for c_start in range(0, N, batch_chunk):
-                c_end = min(c_start + batch_chunk, N)
-                chunk_dists = torch.norm(patches_proj[c_start:c_end] - query_pt, dim=1)
-                min_distances[c_start:c_end] = torch.minimum(min_distances[c_start:c_end], chunk_dists)
+        batch_k = 50
+        while len(selected_indices) < M:
+            k_cur = min(batch_k, M - len(selected_indices))
+            if k_cur == 1:
+                next_idx = int(torch.argmax(min_distances_sq).item())
+                selected_indices.append(next_idx)
+                query_pts = patches_proj[next_idx:next_idx+1]
+            else:
+                _, top_idx = torch.topk(min_distances_sq, k=k_cur)
+                selected_indices.extend(top_idx.cpu().tolist())
+                query_pts = patches_proj[top_idx]
 
-        return patches[selected_indices]
+            dots = torch.matmul(patches_proj, query_pts.T)
+            q_sq = torch.sum(query_pts**2, dim=1).unsqueeze(0)
+            dist_sqs = torch.clamp(patches_sq_norm.unsqueeze(1) + q_sq - 2.0 * dots, min=0.0)
+            min_distances_sq = torch.minimum(min_distances_sq, torch.min(dist_sqs, dim=1).values)
+
+        return patches[selected_indices[:M]]
 
     def fit(self, dataloader: DataLoader) -> None:
-        """
-        Extracts all multi-scale patch features across nominal training images
-        and applies greedy coreset reduction to construct the memory bank.
-        """
         all_patches_list = []
         for batch in dataloader:
             if isinstance(batch, (list, tuple)):
@@ -146,12 +132,6 @@ class PatchCore(BaseAnomalyDetector):
         self.memory_bank = self._greedy_coreset_subsampling(all_patches)
 
     def predict(self, x: torch.Tensor) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Queries test batch [B, 3, 256, 256] against the coreset memory bank.
-        Returns:
-            image_scores: np.ndarray of shape [B]
-            anomaly_maps: np.ndarray of shape [B, 256, 256]
-        """
         if self.memory_bank is None:
             raise RuntimeError("PatchCore model is not fitted. Call .fit() first.")
 
@@ -172,33 +152,24 @@ class PatchCore(BaseAnomalyDetector):
             p3 = self.avg_pool(l3)
             p3_up = F.interpolate(p3, size=p2.shape[2:], mode="bilinear", align_corners=False)
 
-            features = torch.cat([p2, p3_up], dim=1)  # [B, C, 32, 32]
+            features = torch.cat([p2, p3_up], dim=1)
             B_feat, C_feat, H_feat, W_feat = features.shape
 
-            # Query patches: [B * H_feat * W_feat, C_feat]
             query_patches = features.permute(0, 2, 3, 1).reshape(B_feat * H_feat * W_feat, C_feat)
 
-            # Compute min Euclidean distance from each query patch to the memory bank
-            # Chunking query patches to avoid OOM on large batches / test sets
             chunk_size = 2048
             min_dists_list = []
             for i in range(0, query_patches.shape[0], chunk_size):
                 q_chunk = query_patches[i:i + chunk_size]
-                # Pairwise distance matrix [chunk_size, M]
                 dists = torch.cdist(q_chunk, self.memory_bank, p=2.0)
                 min_dists, _ = torch.min(dists, dim=1)
                 min_dists_list.append(min_dists)
 
             min_dists_all = torch.cat(min_dists_list, dim=0)
-
-            # Reshape patch distances to [B, 1, 32, 32]
             patch_scores = min_dists_all.reshape(B, 1, H_feat, W_feat)
-
-            # Bilinearly upsample to original resolution (256, 256)
             amaps_tensor = F.interpolate(patch_scores, size=(H_in, W_in), mode="bilinear", align_corners=False)
-            amaps_np = amaps_tensor.squeeze(1).cpu().numpy()  # [B, 256, 256]
+            amaps_np = amaps_tensor.squeeze(1).cpu().numpy()
 
-        # Apply 2D spatial Gaussian filter to smooth heatmap & compute image scores
         smoothed_amaps = np.zeros_like(amaps_np)
         image_scores = np.zeros(B, dtype=float)
 

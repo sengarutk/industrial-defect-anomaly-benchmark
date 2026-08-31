@@ -1,4 +1,4 @@
-import argparse
+﻿import argparse
 import os
 import sys
 import pandas as pd
@@ -135,6 +135,46 @@ def generate_robustness_table(runs_df: pd.DataFrame, output_tex: str):
     print(f"✅ Generated: {output_tex}")
 
 
+def generate_operational_table(operational_df: pd.DataFrame, output_tex: str):
+    os.makedirs(os.path.dirname(output_tex), exist_ok=True)
+    lines = [
+        "\\begin{table*}[t]",
+        "\\centering",
+        "\\small",
+        "\\caption{Operational Inspection Benchmark under Constrained Operator Alert Budgets and Asymmetric Escape Costs (95\\% Bootstrap Confidence Intervals).}",
+        "\\label{tab:operational_results}",
+        "\\begin{tabular}{llcccc}",
+        "\\toprule",
+        "\\textbf{Category} & \\textbf{Method} & \\textbf{TPR @ 5 Alarms/1k} $\\uparrow$ & \\textbf{MD @ 1k (Escapes)} $\\downarrow$ & \\textbf{CWE ($r=10$)} $\\downarrow$ & \\textbf{P(Overload)} $\\downarrow$ \\\\",
+        "\\midrule"
+    ]
+
+    cats = sorted(operational_df["category"].unique())
+    for cat in cats:
+        cat_df = operational_df[operational_df["category"] == cat]
+        for _, row in cat_df.iterrows():
+            m_name = str(row["method"]).capitalize()
+            tpr_str = f"{row['tpr_at_5_mean']:.3f} [{row['tpr_at_5_ci_low']:.3f}, {row['tpr_at_5_ci_high']:.3f}]"
+            md_str = f"{row['md_at_1k_mean']:.1f} [{row['md_at_1k_ci_low']:.1f}, {row['md_at_1k_ci_high']:.1f}]"
+            cwe_str = f"{row['cwe_r10_mean']:.4f} [{row['cwe_r10_ci_low']:.4f}, {row['cwe_r10_ci_high']:.4f}]"
+            ovl_str = f"{row['overload_prob_mean']:.3f}"
+            lines.append(f"{cat} & {m_name} & {tpr_str} & {md_str} & {cwe_str} & {ovl_str} \\\\")
+        lines.append("\\midrule")
+
+    if lines[-1] == "\\midrule":
+        lines.pop()
+
+    lines.extend([
+        "\\bottomrule",
+        "\\end{tabular}",
+        "\\end{table*}"
+    ])
+
+    with open(output_tex, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"✅ Generated LaTeX Table: {output_tex}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Publication LaTeX and Markdown Report Generator")
     parser.add_argument("--tables-dir", type=str, default="results/mvtec_ad/tables")
@@ -143,6 +183,7 @@ def main():
 
     summary_csv = os.path.join(args.tables_dir, "summary_multiseed.csv")
     runs_csv = os.path.join(args.tables_dir, "runs_master.csv")
+    operational_csv = os.path.join(args.tables_dir, "operational_results.csv")
 
     if not os.path.exists(summary_csv) or not os.path.exists(runs_csv):
         print(f"Warning: Missing summary or runs CSV in {args.tables_dir}. Generating minimal report.")
@@ -154,12 +195,17 @@ def main():
     main_tex = os.path.join(args.tables_dir, "main_results.tex")
     deploy_tex = os.path.join(args.tables_dir, "deployment_profiling.tex")
     robustness_tex = os.path.join(args.tables_dir, "robustness_mrd_mpc.tex")
+    operational_tex = os.path.join(args.tables_dir, "operational_results.tex")
 
     generate_main_results_table(summary_df, main_tex)
     generate_deployment_table(summary_df, deploy_tex)
     generate_robustness_table(runs_df, robustness_tex)
 
-    print("\n✅ Generated LaTeX reports successfully.")
+    if os.path.exists(operational_csv):
+        operational_df = pd.read_csv(operational_csv, on_bad_lines="skip")
+        generate_operational_table(operational_df, operational_tex)
+
+    print("\n✅ Generated all LaTeX reports successfully.")
 
 
 if __name__ == "__main__":

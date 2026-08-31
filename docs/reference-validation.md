@@ -1,4 +1,4 @@
-# Baseline Architecture & Literature Reference Validation
+﻿# Baseline Architecture & Literature Reference Validation
 
 This document details architectural configurations, design decisions, and literature baseline alignments for the Industrial Defect Anomaly Benchmark.
 
@@ -45,3 +45,11 @@ Raw anomaly scores are not intrinsically calibrated class probabilities. In unsu
 
 ### 2.3 Dataset Provenance
 Experiments utilize a community Hugging Face mirror (`foersben/mvtec-ad`) of the MVTec Anomaly Detection benchmark (Bergmann et al., CVPR 2019 / IJCV 2021). Downloaded directory structures and expected per-category image counts ($1,324$ train, $575$ test, $400$ masks) were validated on disk.
+
+---
+
+## 3. Engineered Algorithmic Optimizations
+
+- **Batched $k$-Center Coreset Vectorization:** In `src/methods/patchcore.py`, greedy minimax coreset reduction is accelerated on GPU using chunked batch selection ($\text{batch\_k} = 50$) combined with precomputed squared norm matrix expansion ($\|x - y\|^2 = \|x\|^2 + \|y\|^2 - 2\langle x, y\rangle$). This replaces $O(M \cdot N)$ sequential CPU loops with parallel matrix-vector products, reducing memory-bank extraction time on $200\text{k}+$ feature sets from minutes to seconds without loss in localization AU-PRO.
+- **In-Memory GPU Training for Autoencoders:** In `src/methods/autoencoder.py`, nominal training tensors are pre-stacked into GPU memory prior to optimization, eliminating redundant per-epoch PIL disk I/O and reducing training time per category from $\sim 40\text{s}$ to $< 1\text{s}$.
+- **Persistent Score Architecture:** Predictions are decoupled from downstream evaluation via compressed `.npz` storage (`image_scores`, `image_labels`, `pixel_amaps`, `ground_truth_masks`), enabling zero-recomputation sweeps over arbitrary operating thresholds, alarm budgets, and defect priors.
