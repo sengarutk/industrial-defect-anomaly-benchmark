@@ -1,6 +1,6 @@
 ﻿dataset:
   name: "MVTec AD"
-  categories: ["bottle", "cable", "carpet", "hazelnut", "metal_nut"]
+  categories: ["bottle", "cable", "carpet", "hazelnut", "metal_nut", "grid", "leather"]
   resolution: [256, 256]
   imagenet_norm:
     mean: [0.485, 0.456, 0.406]

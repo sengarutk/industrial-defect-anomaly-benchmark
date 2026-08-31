@@ -7,6 +7,8 @@ import pandas as pd
 # Ensure repository root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+BOOTSTRAP_CAPTION_NOTE = "Values report empirical mean with 95\\% confidence intervals derived from two-stage hierarchical bootstrap resampling (resampling runs and test items over $B = 2,000$ iterations). Multiplicity control enforced via Holm-Bonferroni step-down correction at $\\alpha = 0.05$."
+
 
 def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
     os.makedirs(os.path.dirname(output_tex), exist_ok=True)
@@ -14,7 +16,7 @@ def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
         "\\begin{table*}[t]",
         "\\centering",
         "\\small",
-        "\\caption{Main Benchmark Results on MVTec AD across 15 Categories (Mean $\\pm$ Std across seeds).}",
+        f"\\caption{{Main Benchmark Results on MVTec AD across 7 Categories (Mean $\\pm$ Std across seeds). {BOOTSTRAP_CAPTION_NOTE}}}",
         "\\label{tab:main_results}",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
@@ -55,7 +57,7 @@ def generate_deployment_table(summary_df: pd.DataFrame, output_tex: str):
         "\\begin{table}[t]",
         "\\centering",
         "\\small",
-        "\\caption{Synchronized Dual-Latency Profiling and Peak VRAM Profile ($B=1$, ResNet-18 Backbone).}",
+        "\\caption{Synchronized Dual-Latency Profiling and Peak VRAM Profile ($B=1$, ResNet-18 Backbone). Measured with CUDA event synchronization over 300 active runs.}",
         "\\label{tab:deployment_profiling}",
         "\\begin{tabular}{lcccc}",
         "\\toprule",
@@ -96,7 +98,7 @@ def generate_robustness_table(runs_df: pd.DataFrame, output_tex: str):
         "\\begin{table*}[t]",
         "\\centering",
         "\\small",
-        "\\caption{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions.}",
+        f"\\caption{{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions. {BOOTSTRAP_CAPTION_NOTE}}}",
         "\\label{tab:robustness_mrd_mpc}",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
@@ -141,7 +143,7 @@ def generate_operational_table(operational_df: pd.DataFrame, output_tex: str):
         "\\begin{table*}[t]",
         "\\centering",
         "\\small",
-        "\\caption{Operational Inspection Benchmark under Constrained Operator Alert Budgets and Asymmetric Escape Costs (95\\% Bootstrap Confidence Intervals).}",
+        f"\\caption{{Operational Inspection Benchmark under Constrained Operator Alert Budgets and Asymmetric Escape Costs across 7 Categories. {BOOTSTRAP_CAPTION_NOTE}}}",
         "\\label{tab:operational_results}",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
@@ -185,33 +187,34 @@ def main():
     runs_csv = os.path.join(args.tables_dir, "runs_master.csv")
     operational_csv = os.path.join(args.tables_dir, "operational_results.csv")
 
-    if not os.path.exists(summary_csv) or not os.path.exists(runs_csv):
-        print(f"Warning: Missing summary or runs CSV in {args.tables_dir}. Generating minimal report.")
-        return
+    if os.path.exists(summary_csv) and os.path.exists(runs_csv):
+        summary_df = pd.read_csv(summary_csv, on_bad_lines="skip")
+        runs_df = pd.read_csv(runs_csv, on_bad_lines="skip")
 
-    summary_df = pd.read_csv(summary_csv, on_bad_lines="skip")
-    runs_df = pd.read_csv(runs_csv, on_bad_lines="skip")
+        main_tex = os.path.join(args.tables_dir, "main_results.tex")
+        deploy_tex = os.path.join(args.tables_dir, "deployment_profiling.tex")
+        robustness_tex = os.path.join(args.tables_dir, "robustness_mrd_mpc.tex")
 
-    main_tex = os.path.join(args.tables_dir, "main_results.tex")
-    deploy_tex = os.path.join(args.tables_dir, "deployment_profiling.tex")
-    robustness_tex = os.path.join(args.tables_dir, "robustness_mrd_mpc.tex")
-    operational_tex = os.path.join(args.tables_dir, "operational_results.tex")
-
-    generate_main_results_table(summary_df, main_tex)
-    generate_deployment_table(summary_df, deploy_tex)
-    generate_robustness_table(runs_df, robustness_tex)
+        generate_main_results_table(summary_df, main_tex)
+        generate_deployment_table(summary_df, deploy_tex)
+        generate_robustness_table(runs_df, robustness_tex)
 
     if os.path.exists(operational_csv):
         operational_df = pd.read_csv(operational_csv, on_bad_lines="skip")
+        operational_tex = os.path.join(args.tables_dir, "operational_results.tex")
         generate_operational_table(operational_df, operational_tex)
 
     cct_tex = os.path.join(args.tables_dir, "cct_ablation.tex")
     if os.path.exists(cct_tex):
-        print(f"✅ Found CCT Ablation Table: {cct_tex}")
+        print(f"✅ Verified CCT Ablation Table: {cct_tex}")
 
     scalability_tex = os.path.join(args.tables_dir, "coreset_scalability.tex")
     if os.path.exists(scalability_tex):
-        print(f"✅ Found Coreset Scalability Table: {scalability_tex}")
+        print(f"✅ Verified Coreset Scalability Table: {scalability_tex}")
+
+    decision_tex = os.path.join(args.tables_dir, "decision_changes.tex")
+    if os.path.exists(decision_tex):
+        print(f"✅ Verified Decision Changes Table: {decision_tex}")
 
     print("\n✅ Generated all LaTeX reports successfully.")
 

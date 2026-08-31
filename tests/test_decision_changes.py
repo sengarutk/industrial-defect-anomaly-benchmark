@@ -29,7 +29,7 @@ def test_decision_change_matrix_empty():
     assert mat["nominal_relief_count"] == 0
 
 
-def test_run_decision_change_analysis_synthetic(tmp_path):
+def test_run_decision_change_analysis_cost_ratio_sweep(tmp_path):
     scores_dir = tmp_path / "scores"
     scores_dir.mkdir(parents=True)
     out_dir = tmp_path / "results"
@@ -43,10 +43,13 @@ def test_run_decision_change_analysis_synthetic(tmp_path):
 
     df = run_decision_change_analysis(
         scores_dir=str(scores_dir),
-        output_dir=str(out_dir)
+        output_dir=str(out_dir),
+        cost_ratios=[5.0, 10.0, 20.0, 50.0]
     )
 
-    assert len(df) == 1
+    assert len(df) == 4
+    assert set(df["cost_ratio"].unique()) == {5.0, 10.0, 20.0, 50.0}
     assert "total_flips" in df.columns
     assert "nominal_relief_count" in df.columns
     assert "defect_escape_count" in df.columns
+    assert "cwe" in df.columns

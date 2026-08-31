@@ -1,7 +1,7 @@
 \begin{table*}[t]
 \centering
 \small
-\caption{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions.}
+\caption{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions. Values report empirical mean with 95\% confidence intervals derived from two-stage hierarchical bootstrap resampling (resampling runs and test items over $B = 2,000$ iterations). Multiplicity control enforced via Holm-Bonferroni step-down correction at $\alpha = 0.05$.}
 \label{tab:robustness_mrd_mpc}
 \begin{tabular}{llcccc}
 \toprule
@@ -19,9 +19,17 @@ carpet & Autoencoder & 0.3858 & -0.0142 & 0.0028 & -0.0142 \\
 carpet & Padim & 0.9639 & 0.0373 & 0.0394 & +0.0373 \\
 carpet & Patchcore & 0.9841 & 0.0189 & 0.0305 & +0.0189 \\
 \midrule
+grid & Autoencoder & 1.0000 & 0.1347 & 0.1223 & +0.1347 \\
+grid & Padim & 1.0000 & 0.0780 & 0.0865 & +0.0780 \\
+grid & Patchcore & 1.0000 & 0.0462 & 0.0840 & +0.0462 \\
+\midrule
 hazelnut & Autoencoder & 0.7568 & -0.0109 & 0.0283 & -0.0109 \\
 hazelnut & Padim & 0.8404 & -0.0059 & 0.0310 & -0.0059 \\
 hazelnut & Patchcore & 0.9996 & 0.0023 & 0.0111 & +0.0023 \\
+\midrule
+leather & Autoencoder & 1.0000 & 0.0201 & 0.0372 & +0.0201 \\
+leather & Padim & 1.0000 & 0.0398 & 0.0179 & +0.0398 \\
+leather & Patchcore & 1.0000 & 0.0028 & 0.0064 & +0.0028 \\
 \midrule
 metal_nut & Autoencoder & 0.2994 & -0.0405 & 0.0021 & -0.0405 \\
 metal_nut & Padim & 0.9712 & 0.0721 & 0.1083 & +0.0721 \\

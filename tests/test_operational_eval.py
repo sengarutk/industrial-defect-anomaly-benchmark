@@ -59,3 +59,30 @@ def test_single_class_or_empty_stream():
     labels2, scores2 = sim_no_def.simulate_stream(n_total=100, defect_prior=0.1)
     assert len(labels2) == 100
     assert len(scores2) == 100
+
+
+
+def test_mixed_corruption_stream_simulator():
+    np.random.seed(42)
+    nom_clean = np.random.normal(0.2, 0.05, 300)
+    def_clean = np.random.normal(0.8, 0.05, 100)
+    nom_corr = np.random.normal(0.35, 0.08, 300)
+    def_corr = np.random.normal(0.65, 0.08, 100)
+
+    from src.experiments.operational_eval import MixedCorruptionStreamSimulator
+    sim = MixedCorruptionStreamSimulator(nom_clean, def_clean, nom_corr, def_corr, seed=2026)
+
+    labels, scores, is_corr = sim.simulate_mixed_stream(n_total=5000, defect_prior=0.02, corruption_prob=0.20)
+    assert len(labels) == 5000
+    assert len(scores) == 5000
+    assert len(is_corr) == 5000
+
+    corr_fraction = np.mean(is_corr)
+    assert 0.16 <= corr_fraction <= 0.24  # Around 20%
+
+    metrics = sim.evaluate_mixed_stream(labels, scores, tau=0.5, cost_ratio=10.0, prior=0.02)
+    assert "fa_at_1k" in metrics
+    assert "md_at_1k" in metrics
+    assert "cwe" in metrics
+    assert 0.0 <= metrics["fa_at_1k"] <= 1000.0
+    assert 0.0 <= metrics["md_at_1k"] <= 1000.0

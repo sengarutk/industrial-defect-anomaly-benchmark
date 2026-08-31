@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 import pytest
@@ -99,3 +99,46 @@ def test_robustness_evaluator_synthetic():
         assert k in metrics, f"Missing metric key {k}"
         assert not np.isnan(metrics[k]), f"Metric {k} is NaN"
         assert not np.isinf(metrics[k]), f"Metric {k} is Inf"
+
+
+
+def test_evaluate_operational_robustness():
+    """
+    Verifies evaluate_operational_robustness computes clean vs corrupted metrics and MRD_CWE.
+    """
+    x = torch.randn(4, 3, 256, 256)
+    y = torch.tensor([0, 0, 1, 1], dtype=torch.int64)
+    mask = torch.zeros(4, 1, 256, 256, dtype=torch.float32)
+    meta = [{"defect_type": "scratch"}] * 4
+
+    class SyntheticDataset(torch.utils.data.Dataset):
+        def __len__(self):
+            return 4
+        def __getitem__(self, idx):
+            return x[idx], y[idx], mask[idx], meta[idx]
+
+    clean_loader = DataLoader(SyntheticDataset(), batch_size=2, shuffle=False)
+    corr_loader1 = DataLoader(SyntheticDataset(), batch_size=2, shuffle=False)
+    corr_loader2 = DataLoader(SyntheticDataset(), batch_size=2, shuffle=False)
+
+    corr_loaders = {
+        ("gaussian_noise", 1): corr_loader1,
+        ("defocus_blur", 2): corr_loader2
+    }
+
+    model = MockAnomalyDetector()
+    evaluator = RobustnessEvaluator(model=model, root="data/mvtec_ad", category="bottle")
+
+    op_res = evaluator.evaluate_operational_robustness(
+        clean_loader=clean_loader,
+        corr_loaders=corr_loaders,
+        tau=0.5,
+        cost_ratio=10.0,
+        prior=0.01
+    )
+
+    assert "clean_fa_at_1k" in op_res
+    assert "clean_md_at_1k" in op_res
+    assert "clean_cwe" in op_res
+    assert "mrd_cwe" in op_res
+    assert len(op_res["corrupted_results"]) == 2

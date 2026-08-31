@@ -332,3 +332,78 @@ def evaluate_threshold_strategies(
             })
 
     return results
+
+
+class MixedCorruptionStreamSimulator:
+    """
+    Simulates factory inspection stream with stochastic environmental degradation:
+    Each incoming item has probability p_corr of suffering physical corruptions
+    (defocus blur, lighting shift, sensor noise).
+    """
+    def __init__(
+        self,
+        nominal_clean_scores: np.ndarray,
+        defect_clean_scores: np.ndarray,
+        nominal_corr_scores: np.ndarray,
+        defect_corr_scores: np.ndarray,
+        seed: int = 42
+    ):
+        self.nominal_clean = np.asarray(nominal_clean_scores, dtype=np.float64).ravel()
+        self.defect_clean = np.asarray(defect_clean_scores, dtype=np.float64).ravel()
+        self.nominal_corr = np.asarray(nominal_corr_scores, dtype=np.float64).ravel()
+        self.defect_corr = np.asarray(defect_corr_scores, dtype=np.float64).ravel()
+        self.rng = np.random.RandomState(seed)
+
+    def simulate_mixed_stream(
+        self,
+        n_total: int = 10000,
+        defect_prior: float = 0.01,
+        corruption_prob: float = 0.20
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Simulates stream returning (labels, scores, is_corrupted).
+        """
+        if len(self.nominal_clean) == 0 and len(self.defect_clean) == 0:
+            return np.array([], dtype=int), np.array([], dtype=np.float64), np.array([], dtype=bool)
+
+        def_count = int(round(n_total * defect_prior))
+        nom_count = n_total - def_count
+
+        labels = np.concatenate([np.zeros(nom_count, dtype=int), np.ones(def_count, dtype=int)])
+        perm = self.rng.permutation(n_total)
+        labels = labels[perm]
+
+        is_corrupted = self.rng.rand(n_total) < corruption_prob
+        scores = np.zeros(n_total, dtype=np.float64)
+
+        for i in range(n_total):
+            y = labels[i]
+            corr = is_corrupted[i]
+            if y == 0:
+                pool = self.nominal_corr if (corr and len(self.nominal_corr) > 0) else self.nominal_clean
+            else:
+                pool = self.defect_corr if (corr and len(self.defect_corr) > 0) else self.defect_clean
+
+            if len(pool) > 0:
+                scores[i] = self.rng.choice(pool)
+            else:
+                scores[i] = 0.0
+
+        return labels, scores, is_corrupted
+
+    def evaluate_mixed_stream(
+        self,
+        labels: np.ndarray,
+        scores: np.ndarray,
+        tau: float,
+        cost_ratio: float = 10.0,
+        prior: float = 0.01
+    ) -> Dict[str, float]:
+        fa = compute_fa_at_1k(labels, scores, tau)
+        md = compute_md_at_1k(labels, scores, tau)
+        cwe = compute_cost_weighted_error(labels, scores, tau, cost_ratio=cost_ratio)
+        return {
+            "fa_at_1k": float(fa),
+            "md_at_1k": float(md),
+            "cwe": float(cwe)
+        }

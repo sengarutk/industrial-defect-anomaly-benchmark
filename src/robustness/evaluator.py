@@ -10,6 +10,11 @@ from src.methods.base import BaseAnomalyDetector
 from src.metrics.image_metrics import compute_image_auroc, compute_image_ap, compute_optimal_f1
 from src.metrics.pixel_metrics import compute_pixel_auroc, compute_pixel_ap, compute_aupro
 from src.metrics.calibration import compute_ece
+from src.metrics.operational import (
+    compute_fa_at_1k,
+    compute_md_at_1k,
+    compute_cost_weighted_error
+)
 from src.robustness.corruptions import CORRUPTION_TYPES
 from src.robustness.dataset import CorruptedMVTecTest
 
@@ -22,6 +27,7 @@ class RobustnessEvaluator:
          MPC = 1/18 * sum_{i=1}^{18} (Metric_clean - Metric_corrupted_i)
       2. Non-Negative Mean Robustness Degradation (MRD):
          MRD = 1/18 * sum_{i=1}^{18} max(0, Metric_clean - Metric_corrupted_i)
+      3. Operational Robustness under Cost-Calibrated Thresholds (MRD_CWE).
     """
     def __init__(
         self,
@@ -100,6 +106,57 @@ class RobustnessEvaluator:
     def evaluate_split(self, dataloader: DataLoader) -> Dict[str, float]:
         y_arr, scores_arr, masks_arr, amaps_arr = self.predict_split(dataloader)
         return self.evaluate_predictions(y_arr, scores_arr, masks_arr, amaps_arr)
+
+    def evaluate_operational_robustness(
+        self,
+        clean_loader: DataLoader,
+        corr_loaders: Dict[Tuple[str, int], DataLoader],
+        tau: float,
+        cost_ratio: float = 10.0,
+        prior: float = 0.01
+    ) -> Dict[str, Any]:
+        """
+        Evaluates operational robustness degradation under a fixed decision cutoff (e.g. tau_CCT or tau_budget).
+        Computes clean FA@1k, MD@1k, CWE, per-corruption metrics, and Non-Negative Operational Degradation:
+          MRD_CWE = 1/18 * sum_{i=1}^{18} max(0, CWE_corrupted_i - CWE_clean)
+        """
+        clean_y, clean_s, _, _ = self.predict_split(clean_loader)
+        clean_fa = compute_fa_at_1k(clean_y, clean_s, tau)
+        clean_md = compute_md_at_1k(clean_y, clean_s, tau)
+        clean_cwe = compute_cost_weighted_error(clean_y, clean_s, tau, cost_ratio=cost_ratio)
+
+        corrupted_results: List[Dict[str, Any]] = []
+        cwe_drops: List[float] = []
+
+        for (ctype, sev), loader in corr_loaders.items():
+            corr_y, corr_s, _, _ = self.predict_split(loader)
+            corr_fa = compute_fa_at_1k(corr_y, corr_s, tau)
+            corr_md = compute_md_at_1k(corr_y, corr_s, tau)
+            corr_cwe = compute_cost_weighted_error(corr_y, corr_s, tau, cost_ratio=cost_ratio)
+
+            delta_cwe = corr_cwe - clean_cwe
+            delta_fa = corr_fa - clean_fa
+            cwe_drops.append(max(0.0, delta_cwe))
+
+            corrupted_results.append({
+                "corruption_type": ctype,
+                "severity": sev,
+                "corrupted_fa_at_1k": corr_fa,
+                "corrupted_md_at_1k": corr_md,
+                "corrupted_cwe": corr_cwe,
+                "delta_cwe": delta_cwe,
+                "delta_fa_at_1k": delta_fa
+            })
+
+        mrd_cwe = float(np.mean(cwe_drops)) if len(cwe_drops) > 0 else 0.0
+
+        return {
+            "clean_fa_at_1k": clean_fa,
+            "clean_md_at_1k": clean_md,
+            "clean_cwe": clean_cwe,
+            "corrupted_results": corrupted_results,
+            "mrd_cwe": mrd_cwe
+        }
 
     def run_full_stress_test(
         self,
