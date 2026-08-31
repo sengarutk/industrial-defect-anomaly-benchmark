@@ -1,4 +1,4 @@
-import warnings
+﻿import warnings
 from typing import Dict, Any, Union
 import numpy as np
 from sklearn.metrics import roc_auc_score, average_precision_score, precision_recall_curve
@@ -83,6 +83,9 @@ def compute_optimal_f1(labels: np.ndarray, scores: np.ndarray) -> Dict[str, floa
         "precision_at_optimal": best_prec,
         "recall_at_optimal": best_rec
     }
+
+
+compute_optimal_f1_threshold = compute_optimal_f1
 
 
 def auroc(labels: np.ndarray, scores: np.ndarray) -> float:

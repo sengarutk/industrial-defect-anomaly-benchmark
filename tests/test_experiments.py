@@ -1,4 +1,4 @@
-import os
+﻿import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -8,6 +8,7 @@ from typing import Tuple
 from src.methods.base import BaseAnomalyDetector
 from src.analysis.failure_catalog import FailureMiner
 from src.experiments.robust_training import AugmentedNormalDataset, RobustTrainingExperiment
+from src.experiments.aggregation_ablation import aggregate_anomaly_map, run_aggregation_ablation
 
 
 class MockAnomalyDetector(BaseAnomalyDetector):
@@ -16,7 +17,6 @@ class MockAnomalyDetector(BaseAnomalyDetector):
 
     def predict(self, x: torch.Tensor) -> Tuple[np.ndarray, np.ndarray]:
         B = x.shape[0]
-        # Return synthetic anomaly scores and maps
         scores = np.linspace(0.2, 0.8, B)
         amaps = np.ones((B, 256, 256), dtype=float) * 0.4
         return scores, amaps
@@ -60,7 +60,6 @@ def test_augmented_normal_dataset_synthetic(tmp_path):
     """
     Verifies AugmentedNormalDataset applies mild stochastic physical augmentations.
     """
-    # Create dummy train/good folder
     good_dir = tmp_path / "bottle" / "train" / "good"
     good_dir.mkdir(parents=True)
     dummy_img = (np.random.rand(256, 256, 3) * 255).astype(np.uint8)
@@ -83,3 +82,26 @@ def test_robust_training_experiment_mock():
     exp = RobustTrainingExperiment(root="data/mvtec_ad", category="bottle", method="patchcore")
     assert exp.category == "bottle"
     assert exp.method == "patchcore"
+
+
+def test_aggregation_ablation_all_rules():
+    """
+    Verifies all 5 spatial aggregation rules and ablation runner.
+    """
+    amap = np.random.rand(32, 32).astype(np.float32)
+    for strat in ["global_max", "percentile_99", "percentile_95", "top_1_percent_mean", "gaussian_pooled_max"]:
+        s = aggregate_anomaly_map(amap, method=strat)
+        assert isinstance(s, float)
+        assert not np.isnan(s)
+
+    with pytest.raises(ValueError):
+        aggregate_anomaly_map(amap, method="unknown_strategy")
+
+    # Batch test
+    amaps = np.random.rand(10, 32, 32).astype(np.float32)
+    labels = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1])
+    res = run_aggregation_ablation(amaps, labels)
+    assert len(res) == 5
+    for strat, metrics in res.items():
+        assert "image_auroc" in metrics
+        assert "image_ap" in metrics
