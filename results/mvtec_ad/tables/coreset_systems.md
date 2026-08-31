@@ -2,7 +2,7 @@
 
 | method                 |   runtime_sec |   speedup_vs_cpu |   peak_vram_mb |   coverage_radius |
 |:-----------------------|--------------:|-----------------:|---------------:|------------------:|
-| cpu_sequential_greedy  |   1.81195     |           1      |         0      |           14.9339 |
-| gpu_unbatched_greedy   |   0.122254    |          14.8212 |        14.7642 |           14.9248 |
-| gpu_batched_vectorized |   0.00659756  |         274.64   |        14.5635 |           14.9247 |
-| random_subsampling     |   0.000621049 |        2917.57   |         0      |           15.3702 |
+| cpu_sequential_greedy  |   1.54129     |          1       |         0      |           14.9339 |
+| gpu_unbatched_greedy   |   0.181346    |          8.49914 |        14.7642 |           14.9248 |
+| gpu_batched_vectorized |   0.0210697   |         73.152   |        14.5635 |           14.9247 |
+| random_subsampling     |   0.000627905 |       2454.65    |         0      |           15.3702 |

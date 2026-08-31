@@ -34,6 +34,33 @@ def bootstrap_ci(
     return (mean_val, low, high)
 
 
+def validate_bootstrap_ci_coverage(
+    n_simulations: int = 500,
+    sample_size: int = 100,
+    true_mean: float = 5.0,
+    true_std: float = 2.0,
+    ci: float = 0.95,
+    n_bootstraps: int = 500,
+    seed: int = 42
+) -> float:
+    """
+    Monte Carlo empirical coverage rate validation for non-parametric bootstrap confidence intervals.
+    Draws synthetic samples from known distribution N(mu, sigma^2) and verifies that
+    empirical coverage satisfies the nominal (1 - alpha) bounds (e.g. 95% nominal CI covers true mean ~95% of the time).
+    """
+    rng = np.random.RandomState(seed)
+    covered_count = 0
+
+    for i in range(n_simulations):
+        data = rng.normal(loc=true_mean, scale=true_std, size=sample_size)
+        sim_seed = seed + i + 1
+        _, low, high = bootstrap_ci(data, n_bootstraps=n_bootstraps, ci=ci, seed=sim_seed)
+        if low <= true_mean <= high:
+            covered_count += 1
+
+    return float(covered_count / n_simulations)
+
+
 def hierarchical_bootstrap_ci(
     data_records: List[Dict[str, Any]],
     metric_fn: Callable[[List[Dict[str, Any]]], float],
@@ -46,16 +73,6 @@ def hierarchical_bootstrap_ci(
     
     Stage 1: Resample experimental runs / records with replacement.
     Stage 2: Within each selected run, resample item indices (scores/labels) with replacement.
-    
-    Args:
-        data_records: List of dictionaries representing runs (must contain 'scores', 'labels', etc.)
-        metric_fn: Function mapping a list of resampled run records to a scalar metric.
-        n_resamples: Number of bootstrap iterations (default 2000).
-        ci: Confidence interval nominal coverage (default 0.95).
-        seed: Random seed.
-        
-    Returns:
-        Dict containing estimate, ci_low, ci_high, std_error, and metadata.
     """
     if len(data_records) == 0:
         return {
@@ -73,11 +90,9 @@ def hierarchical_bootstrap_ci(
     resample_estimates = []
 
     for _ in range(n_resamples):
-        # Stage 1: Resample runs with replacement
         run_indices = rng.choice(n_runs, size=n_runs, replace=True)
         resampled_runs = []
 
-        # Stage 2: Resample items within each chosen run
         for r_idx in run_indices:
             rec = data_records[r_idx]
             n_items = len(rec["scores"]) if "scores" in rec else 0
@@ -163,7 +178,6 @@ def compute_paired_wilcoxon_analysis(
         total_w = w_plus + w_minus
         r_rb = float((w_plus - w_minus) / total_w) if total_w > 0 else 0.0
 
-    # Paired Bootstrap CI on mean difference
     _, ci_low, ci_high = bootstrap_ci(diffs, n_bootstraps=n_bootstraps, ci=1.0 - alpha, seed=seed)
 
     return {

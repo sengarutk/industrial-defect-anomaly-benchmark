@@ -441,3 +441,121 @@ def plot_operator_review_overload(
     plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     return output_path
+
+
+
+def plot_cct_cost_tradeoff(
+    scores: np.ndarray,
+    labels: np.ndarray,
+    output_path: str,
+    cost_ratios: List[float] = [10.0, 20.0, 50.0],
+    prior: float = 0.01
+) -> str:
+    """
+    Renders empirical Cost-Weighted Error curves C(tau) vs Decision Thresholds across cost ratios,
+    marking the optimal cost-calibrated threshold tau_CCT.
+    """
+    from src.metrics.cost_calibrated import compute_empirical_cost_curve, optimize_cct_threshold
+    set_paper_style()
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+
+    palette = ["#1f77b4", "#ff7f0e", "#d62728"]
+    for idx, r in enumerate(cost_ratios):
+        taus, costs, _, _ = compute_empirical_cost_curve(scores, labels, cost_ratio=r, prior=prior, num_thresholds=200)
+        cct_res = optimize_cct_threshold(scores, labels, cost_ratio=r, prior=prior, max_alerts_per_1k=5.0)
+        opt_tau = cct_res["threshold"]
+        min_c = cct_res["min_expected_cost"]
+
+        ax.plot(taus, costs, label=f"Cost Ratio r = {int(r)} (Defect Escape {int(r)}x)", color=palette[idx % len(palette)], lw=2.2)
+        ax.scatter([opt_tau], [min_c], color=palette[idx % len(palette)], s=90, zorder=5, edgecolors="black")
+
+    ax.set_xlabel("Decision Threshold (\\tau)", fontsize=11, fontweight="bold")
+    ax.set_ylabel("Expected Unit Inspection Risk C(\\tau)", fontsize=11, fontweight="bold")
+    ax.set_title("Cost-Calibrated Thresholding (CCT) Expected Risk Curves", fontsize=13, fontweight="bold", pad=12)
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend(loc="upper right", frameon=True)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
+def plot_coreset_scalability(
+    scalability_df: pd.DataFrame,
+    output_path: str
+) -> str:
+    """
+    Plots coreset selection runtime vs patch set size N on log-log scale.
+    """
+    set_paper_style()
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+
+    sub_128 = scalability_df[scalability_df["feature_dim_D"] == 128] if "feature_dim_D" in scalability_df.columns else scalability_df
+
+    # Left: Runtime (s)
+    ax1.plot(sub_128["num_patches_N"], sub_128["time_cpu_sec"], marker="o", lw=2.0, label="CPU Sequential Greedy", color="#d62728")
+    ax1.plot(sub_128["num_patches_N"], sub_128["time_gpu_unbatched_sec"], marker="s", lw=2.0, label="GPU Unbatched Greedy", color="#ff7f0e")
+    ax1.plot(sub_128["num_patches_N"], sub_128["time_gpu_batched_sec"], marker="^", lw=2.5, label="GPU Batched Vectorized (Ours)", color="#2ca02c")
+    ax1.set_xscale("log")
+    ax1.set_yscale("log")
+    ax1.set_xlabel("Number of Candidate Patches (N)", fontsize=11, fontweight="bold")
+    ax1.set_ylabel("Runtime (seconds, log scale)", fontsize=11, fontweight="bold")
+    ax1.set_title("Coreset Selection Scaling (D=128)", fontsize=12, fontweight="bold")
+    ax1.grid(True, linestyle="--", alpha=0.5)
+    ax1.legend()
+
+    # Right: Speedup vs CPU
+    ax2.plot(sub_128["num_patches_N"], sub_128["speedup_vs_cpu"], marker="^", lw=2.5, label="GPU Batched Speedup", color="#2ca02c")
+    ax2.plot(sub_128["num_patches_N"], sub_128["speedup_unbatched_vs_cpu"], marker="s", lw=2.0, label="GPU Unbatched Speedup", color="#ff7f0e")
+    ax2.axhline(1.0, linestyle=":", color="gray", label="CPU Baseline (1x)")
+    ax2.set_xscale("log")
+    ax2.set_xlabel("Number of Candidate Patches (N)", fontsize=11, fontweight="bold")
+    ax2.set_ylabel("Throughput Speedup vs. CPU (x)", fontsize=11, fontweight="bold")
+    ax2.set_title("GPU Acceleration Factor vs CPU", fontsize=12, fontweight="bold")
+    ax2.grid(True, linestyle="--", alpha=0.5)
+    ax2.legend()
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
+def plot_decision_confusion_shifts(
+    decision_df: pd.DataFrame,
+    output_path: str
+) -> str:
+    """
+    Renders stacked bar chart illustrating Nominal Relief (false alarms prevented)
+    vs Defect Escape count when transitioning from Quantile-99 to CCT.
+    """
+    set_paper_style()
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    cat_summary = decision_df.groupby("category").agg({
+        "nominal_relief_count": "mean",
+        "defect_escape_count": "mean"
+    }).reset_index()
+
+    x = np.arange(len(cat_summary))
+    width = 0.45
+
+    ax.bar(x, cat_summary["nominal_relief_count"], width, label="False Alarms Prevented (Nominal Relief)", color="#2ca02c", edgecolor="black")
+    ax.bar(x, -cat_summary["defect_escape_count"], width, label="Defects Escaped (Budget Bound)", color="#d62728", edgecolor="black")
+
+    ax.axhline(0, color="black", lw=1.2)
+    ax.set_xticks(x)
+    ax.set_xticklabels([c.replace('_', ' ').title() for c in cat_summary["category"]], rotation=30, ha="right", fontsize=10, fontweight="bold")
+    ax.set_ylabel("Mean Part Count Shift (\\Delta Units)", fontsize=11, fontweight="bold")
+    ax.set_title("Operational Decision Shifts: Quantile-99 \\to Cost-Calibrated (CCT)", fontsize=13, fontweight="bold", pad=12)
+    ax.grid(True, linestyle="--", alpha=0.4, axis="y")
+    ax.legend(loc="upper right", frameon=True)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+    return output_path

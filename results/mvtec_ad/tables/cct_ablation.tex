@@ -1,0 +1,36 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Out-of-Sample Cost-Calibrated Thresholding (CCT) vs. Standard Quantile and Alert Budget Baselines ($50\%$ Calibration / $50\%$ Evaluation Split across 45 runs).}
+\label{tab:cct_ablation}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Category} & \textbf{Method} & \textbf{CWE (CCT, Ours)} ($\downarrow$) & \textbf{CWE (Budget 5)} ($\downarrow$) & \textbf{CWE (Quantile 99)} ($\downarrow$) & \textbf{FA@1k (CCT)} ($\le 5$) \\
+\midrule
+\multicolumn{6}{l}{\textbf{Bottle}} \\
+ & ConvAutoencoder & $6.9070 \pm 1.1338$ & $6.7519 \pm 1.0004$ & $6.7519 \pm 1.0004$ & 33.3 \\
+ & PaDiM & $0.1783 \pm 0.1343$ & $0.0233 \pm 0.0000$ & $0.0233 \pm 0.0000$ & 100.0 \\
+ & PatchCore & $0.2326 \pm 0.2326$ & $0.0310 \pm 0.0269$ & $0.0310 \pm 0.0269$ & 0.0 \\
+\midrule
+\multicolumn{6}{l}{\textbf{Cable}} \\
+ & ConvAutoencoder & $6.0933 \pm 0.0693$ & $6.0978 \pm 0.0734$ & $6.0978 \pm 0.0734$ & 11.5 \\
+ & PaDiM & $5.1556 \pm 0.2037$ & $4.8444 \pm 0.2037$ & $4.7111 \pm 0.0770$ & 0.0 \\
+ & PatchCore & $0.6756 \pm 0.2600$ & $0.6311 \pm 0.2701$ & $0.6311 \pm 0.2701$ & 23.0 \\
+\midrule
+\multicolumn{6}{l}{\textbf{Carpet}} \\
+ & ConvAutoencoder & $7.5819 \pm 0.0933$ & $7.5819 \pm 0.0933$ & $7.5819 \pm 0.0933$ & 47.6 \\
+ & PaDiM & $1.8701 \pm 0.4388$ & $1.4802 \pm 0.5255$ & $1.4802 \pm 0.5255$ & 23.8 \\
+ & PatchCore & $0.9040 \pm 0.2589$ & $0.3559 \pm 0.1617$ & $0.3616 \pm 0.1538$ & 0.0 \\
+\midrule
+\multicolumn{6}{l}{\textbf{Hazelnut}} \\
+ & ConvAutoencoder & $3.6788 \pm 1.3847$ & $3.5152 \pm 1.2177$ & $3.3939 \pm 1.1127$ & 116.7 \\
+ & PaDiM & $5.6485 \pm 0.1821$ & $5.4061 \pm 0.1994$ & $5.4121 \pm 0.1944$ & 33.3 \\
+ & PatchCore & $0.1273 \pm 0.2049$ & $0.0121 \pm 0.0105$ & $0.0121 \pm 0.0105$ & 16.7 \\
+\midrule
+\multicolumn{6}{l}{\textbf{Metal Nut}} \\
+ & ConvAutoencoder & $8.0632 \pm 0.0850$ & $8.0632 \pm 0.0850$ & $8.0632 \pm 0.0850$ & 90.9 \\
+ & PaDiM & $0.7644 \pm 0.3982$ & $0.6494 \pm 0.3589$ & $0.6494 \pm 0.3589$ & 90.9 \\
+ & PatchCore & $0.3621 \pm 0.4372$ & $0.1379 \pm 0.0752$ & $0.1379 \pm 0.0752$ & 90.9 \\
+\bottomrule
+\end{tabular}
+\end{table*}

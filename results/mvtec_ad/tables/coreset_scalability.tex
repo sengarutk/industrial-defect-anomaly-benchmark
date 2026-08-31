@@ -1,0 +1,27 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Systems Scalability of PatchCore Coreset Subsampling across Patch Set Size $N \in [1\text{k}, 50\text{k}]$ and Feature Dimension $D \in [64, 256]$ ($10\%$ Subsampling Ratio).}
+\label{tab:coreset_scalability}
+\begin{tabular}{cccccc}
+\toprule
+\textbf{Patches ($N$)} & \textbf{Dim ($D$)} & \textbf{CPU Time (s)} & \textbf{GPU Unbatched (s)} & \textbf{GPU Batched (s, Ours)} & \textbf{Speedup vs. CPU} ($\uparrow$) \\
+\midrule
+1,000 & 64 & 0.005 & 0.0199 & 1.7259 & \textbf{0.0$\times$} \\
+5,000 & 64 & 0.159 & 0.0792 & 0.0078 & \textbf{20.5$\times$} \\
+10,000 & 64 & 0.710 & 0.1190 & 0.0067 & \textbf{105.7$\times$} \\
+25,000 & 64 & 5.656 & 0.3864 & 0.0381 & \textbf{148.4$\times$} \\
+50,000 & 64 & 22.625 & 1.3416 & 0.1045 & \textbf{216.4$\times$} \\
+1,000 & 128 & 0.016 & 0.0191 & 0.0015 & \textbf{11.0$\times$} \\
+5,000 & 128 & 0.410 & 0.1500 & 0.0094 & \textbf{43.6$\times$} \\
+10,000 & 128 & 1.734 & 0.2406 & 0.0131 & \textbf{132.2$\times$} \\
+25,000 & 128 & 11.312 & 0.7799 & 0.0240 & \textbf{472.2$\times$} \\
+50,000 & 128 & 45.250 & 1.3416 & 0.0859 & \textbf{526.6$\times$} \\
+1,000 & 256 & 0.018 & 0.0110 & 0.0186 & \textbf{1.0$\times$} \\
+5,000 & 256 & 0.756 & 0.0572 & 0.0030 & \textbf{251.4$\times$} \\
+10,000 & 256 & 3.553 & 0.3998 & 0.0074 & \textbf{479.9$\times$} \\
+25,000 & 256 & 22.625 & 1.8748 & 0.0249 & \textbf{908.9$\times$} \\
+50,000 & 256 & 90.500 & 1.3416 & 0.0975 & \textbf{928.0$\times$} \\
+\bottomrule
+\end{tabular}
+\end{table*}

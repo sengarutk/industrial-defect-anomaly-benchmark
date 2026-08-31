@@ -23,12 +23,13 @@ $PYTEST_BIN --cov=src --cov-report=term-missing tests/ -v
 echo "=== 3. Executing Operational Stream Evaluations (IID, Burst, Drift) ==="
 $PYTHON_BIN scripts/run_operational_eval.py --scores-dir results/mvtec_ad/scores --output-dir results/mvtec_ad
 
-echo "=== 4. Running Image Aggregation and Coreset Systems Ablations ==="
+echo "=== 4. Running Cost-Calibrated Thresholding (CCT) & Systems Scalability Ablations ==="
+$PYTHON_BIN scripts/run_cct_experiments.py --scores-dir results/mvtec_ad/scores --output-dir results/mvtec_ad
 $PYTHON_BIN scripts/run_ablations.py --scores-dir results/mvtec_ad/scores --output-dir results/mvtec_ad
 
 echo "=== 5. Compiling Publication LaTeX Tables and Figures ==="
 $PYTHON_BIN scripts/generate_plots.py --tables-dir results/mvtec_ad/tables --output-dir results/mvtec_ad/figures
-$PYTHON_BIN scripts/generate_operational_plots.py --scores-dir results/mvtec_ad/scores --output-dir results/mvtec_ad/figures/operational
+$PYTHON_BIN scripts/generate_operational_plots.py --scores-dir results/mvtec_ad/scores --tables-dir results/mvtec_ad/tables --output-dir results/mvtec_ad/figures/operational
 $PYTHON_BIN scripts/generate_report.py --tables-dir results/mvtec_ad/tables --docs-dir docs
 
-echo "=== Master Benchmark Reproduction Successfully Completed ==="
+echo "=== ✅ Master Benchmark Reproduction Successfully Completed ==="

@@ -1,8 +1,8 @@
 ﻿import argparse
 import os
 import sys
+import glob
 import pandas as pd
-import numpy as np
 
 # Ensure repository root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -14,11 +14,11 @@ def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
         "\\begin{table*}[t]",
         "\\centering",
         "\\small",
-        "\\caption{Multi-Seed Benchmark Evaluation on Representative MVTec AD Categories (Mean $\\pm$ Std over 3 seeds).}",
-        "\\label{tab:mvtec_main_results}",
+        "\\caption{Main Benchmark Results on MVTec AD across 15 Categories (Mean $\\pm$ Std across seeds).}",
+        "\\label{tab:main_results}",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
-        "\\textbf{Category} & \\textbf{Method} & \\textbf{Image AUROC} $\\uparrow$ & \\textbf{Pixel AUROC} $\\uparrow$ & \\textbf{Localization AU-PRO} $\\uparrow$ & \\textbf{Non-Neg MRD} $\\downarrow$ \\\\",
+        "\\textbf{Category} & \\textbf{Method} & \\textbf{Image AUROC} $\\uparrow$ & \\textbf{Pixel AUROC} $\\uparrow$ & \\textbf{AU-PRO} $\\uparrow$ & \\textbf{Robustness MRD} $\\downarrow$ \\\\",
         "\\midrule"
     ]
 
@@ -204,6 +204,14 @@ def main():
     if os.path.exists(operational_csv):
         operational_df = pd.read_csv(operational_csv, on_bad_lines="skip")
         generate_operational_table(operational_df, operational_tex)
+
+    cct_tex = os.path.join(args.tables_dir, "cct_ablation.tex")
+    if os.path.exists(cct_tex):
+        print(f"✅ Found CCT Ablation Table: {cct_tex}")
+
+    scalability_tex = os.path.join(args.tables_dir, "coreset_scalability.tex")
+    if os.path.exists(scalability_tex):
+        print(f"✅ Found Coreset Scalability Table: {scalability_tex}")
 
     print("\n✅ Generated all LaTeX reports successfully.")
 
