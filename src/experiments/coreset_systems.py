@@ -78,6 +78,7 @@ def gpu_batched_vectorized(
     """
     High-performance batched vectorized k-center on GPU utilizing algebraic distance expansion:
       ||x - y||^2 = ||x||^2 + ||y||^2 - 2 <x, y>
+    and top-k batch selection without serial scalar synchronization.
     """
     device = features.device
     if device.type == "cuda":
@@ -95,28 +96,26 @@ def gpu_batched_vectorized(
     x_sq = torch.sum(features ** 2, dim=1)
     
     # Initial distance
-    diff = features - features[first_idx]
-    min_distances = torch.sum(diff ** 2, dim=1)
+    start_pt = features[first_idx]
+    start_sq_norm = torch.sum(start_pt ** 2)
+    dot_start = torch.mv(features, start_pt)
+    min_distances_sq = torch.clamp(x_sq + start_sq_norm - 2.0 * dot_start, min=0.0)
     
     while len(selected_indices) < target_size:
         curr_batch_k = min(batch_k, target_size - len(selected_indices))
-        batch_new_indices = []
-        temp_min_dist = min_distances.clone()
-        
-        for _ in range(curr_batch_k):
-            next_idx = int(torch.argmax(temp_min_dist).item())
-            batch_new_indices.append(next_idx)
-            temp_min_dist[next_idx] = -1.0
+        if curr_batch_k == 1:
+            next_idx = int(torch.argmax(min_distances_sq).item())
+            selected_indices.append(next_idx)
+            query_pts = features[next_idx:next_idx+1]
+        else:
+            _, top_idx = torch.topk(min_distances_sq, k=curr_batch_k)
+            selected_indices.extend(top_idx.cpu().tolist())
+            query_pts = features[top_idx]
             
-        # Vectorized batch distance calculation
-        batch_t = features[batch_new_indices]  # (K, D)
-        y_sq = torch.sum(batch_t ** 2, dim=1)  # (K,)
-        dist_matrix = x_sq.unsqueeze(1) + y_sq.unsqueeze(0) - 2.0 * torch.matmul(features, batch_t.t())  # (N, K)
-        dist_matrix = torch.clamp(dist_matrix, min=0.0)
-        
-        batch_min_dist, _ = torch.min(dist_matrix, dim=1)
-        min_distances = torch.minimum(min_distances, batch_min_dist)
-        selected_indices.extend(batch_new_indices)
+        dots = torch.matmul(features, query_pts.T)
+        q_sq = torch.sum(query_pts ** 2, dim=1).unsqueeze(0)
+        dist_sqs = torch.clamp(x_sq.unsqueeze(1) + q_sq - 2.0 * dots, min=0.0)
+        min_distances_sq = torch.minimum(min_distances_sq, torch.min(dist_sqs, dim=1).values)
         
     if device.type == "cuda":
         torch.cuda.synchronize(device)
@@ -140,15 +139,21 @@ def random_subsampling(n_samples: int, target_size: int, seed: int = 42) -> Tupl
     return indices, elapsed
 
 
-def compute_coverage_radius(features: np.ndarray, selected_indices: np.ndarray) -> float:
+def compute_coverage_radius(features: np.ndarray, selected_indices: np.ndarray, chunk_size: int = 1024) -> float:
     """
-    Computes minimax coverage radius: max_{x in X} min_{c in C} ||x - c||.
+    Computes minimax coverage radius: max_{x in X} min_{c in C} ||x - c|| using chunked torch.cdist.
     """
-    coreset = features[selected_indices]
-    diff = features[:, None, :] - coreset[None, :, :]
-    dists = np.sqrt(np.sum(diff ** 2, axis=-1))
-    min_dists = np.min(dists, axis=1)
-    return float(np.max(min_dists))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    X = torch.from_numpy(features).to(device)
+    C = X[selected_indices]
+    max_min_dist = 0.0
+    with torch.no_grad():
+        for i in range(0, X.shape[0], chunk_size):
+            chunk = X[i:i + chunk_size]
+            dists = torch.cdist(chunk, C, p=2.0)
+            min_d, _ = torch.min(dists, dim=1)
+            max_min_dist = max(max_min_dist, float(torch.max(min_d).item()))
+    return float(max_min_dist)
 
 
 def run_coreset_systems_benchmark(
