@@ -4,37 +4,38 @@
 \vspace{-2mm}
 \caption{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions. Values report empirical mean with 95\% confidence intervals derived from two-stage hierarchical bootstrap resampling (resampling runs and test items over $B = 2,000$ iterations). Multiplicity control enforced via Holm-Bonferroni step-down correction at $\alpha = 0.05$.}
 \label{tab:robustness_mrd_mpc}
+\resizebox{0.95\textwidth}{!}{%
 \begin{tabular}{llcccc}
 \toprule
 \textbf{Category} & \textbf{Method} & \textbf{Clean AUROC} & \textbf{Non-Neg MRD (AUROC)} $\downarrow$ & \textbf{Non-Neg MRD (AU-PRO)} $\downarrow$ & \textbf{Signed MPC (AUROC)} $\Delta$ \\
 \midrule
-bottle & Autoencoder & 0.5108 & -0.0540 & 0.0501 & -0.0540 \\
-bottle & Padim & 0.9970 & 0.0293 & 0.0267 & +0.0293 \\
-bottle & Patchcore & 1.0000 & 0.0077 & 0.0121 & +0.0077 \\
+bottle & ConvAutoencoder & 0.5108 & 0.0000 & 0.0501 & $-0.0540$ \\
+bottle & PaDiM & 0.9970 & 0.0293 & 0.0267 & $+0.0293$ \\
+bottle & PatchCore & 1.0000 & 0.0077 & 0.0121 & $+0.0077$ \\
 \midrule
-cable & Autoencoder & 0.4525 & -0.0096 & 0.0181 & -0.0096 \\
-cable & Padim & 0.8617 & 0.0119 & 0.0185 & +0.0119 \\
-cable & Patchcore & 0.9903 & 0.0268 & 0.0190 & +0.0268 \\
+cable & ConvAutoencoder & 0.4525 & 0.0000 & 0.0181 & $-0.0096$ \\
+cable & PaDiM & 0.8617 & 0.0119 & 0.0185 & $+0.0119$ \\
+cable & PatchCore & 0.9903 & 0.0268 & 0.0190 & $+0.0268$ \\
 \midrule
-carpet & Autoencoder & 0.3858 & -0.0142 & 0.0028 & -0.0142 \\
-carpet & Padim & 0.9639 & 0.0373 & 0.0394 & +0.0373 \\
-carpet & Patchcore & 0.9841 & 0.0189 & 0.0305 & +0.0189 \\
+carpet & ConvAutoencoder & 0.3858 & 0.0000 & 0.0028 & $-0.0142$ \\
+carpet & PaDiM & 0.9639 & 0.0373 & 0.0394 & $+0.0373$ \\
+carpet & PatchCore & 0.9841 & 0.0189 & 0.0305 & $+0.0189$ \\
 \midrule
-grid & Autoencoder & 1.0000 & 0.1347 & 0.1223 & +0.1347 \\
-grid & Padim & 1.0000 & 0.0780 & 0.0865 & +0.0780 \\
-grid & Patchcore & 1.0000 & 0.0462 & 0.0840 & +0.0462 \\
+grid & ConvAutoencoder & 1.0000 & 0.1347 & 0.1223 & $+0.1347$ \\
+grid & PaDiM & 1.0000 & 0.0780 & 0.0865 & $+0.0780$ \\
+grid & PatchCore & 1.0000 & 0.0462 & 0.0840 & $+0.0462$ \\
 \midrule
-hazelnut & Autoencoder & 0.7568 & -0.0109 & 0.0283 & -0.0109 \\
-hazelnut & Padim & 0.8404 & -0.0059 & 0.0310 & -0.0059 \\
-hazelnut & Patchcore & 0.9996 & 0.0023 & 0.0111 & +0.0023 \\
+hazelnut & ConvAutoencoder & 0.7568 & 0.0000 & 0.0283 & $-0.0109$ \\
+hazelnut & PaDiM & 0.8404 & 0.0000 & 0.0310 & $-0.0059$ \\
+hazelnut & PatchCore & 0.9996 & 0.0023 & 0.0111 & $+0.0023$ \\
 \midrule
-leather & Autoencoder & 1.0000 & 0.0201 & 0.0372 & +0.0201 \\
-leather & Padim & 1.0000 & 0.0398 & 0.0179 & +0.0398 \\
-leather & Patchcore & 1.0000 & 0.0028 & 0.0064 & +0.0028 \\
+leather & ConvAutoencoder & 1.0000 & 0.0201 & 0.0372 & $+0.0201$ \\
+leather & PaDiM & 1.0000 & 0.0398 & 0.0179 & $+0.0398$ \\
+leather & PatchCore & 1.0000 & 0.0028 & 0.0064 & $+0.0028$ \\
 \midrule
-metal_nut & Autoencoder & 0.2994 & -0.0405 & 0.0021 & -0.0405 \\
-metal_nut & Padim & 0.9712 & 0.0721 & 0.1083 & +0.0721 \\
-metal_nut & Patchcore & 0.9971 & 0.0302 & 0.0380 & +0.0302 \\
+metal_nut & ConvAutoencoder & 0.2994 & 0.0000 & 0.0021 & $-0.0405$ \\
+metal_nut & PaDiM & 0.9712 & 0.0721 & 0.1083 & $+0.0721$ \\
+metal_nut & PatchCore & 0.9971 & 0.0302 & 0.0380 & $+0.0302$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}

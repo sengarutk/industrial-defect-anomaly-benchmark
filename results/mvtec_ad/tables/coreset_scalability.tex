@@ -4,25 +4,26 @@
 \vspace{-2mm}
 \caption{Systems Scalability of PatchCore Coreset Subsampling across Patch Set Size $N \in [1\text{k}, 50\text{k}]$ and Feature Dimension $D \in [64, 256]$ ($10\%$ Subsampling Ratio).}
 \label{tab:coreset_scalability}
+\resizebox{0.95\textwidth}{!}{%
 \begin{tabular}{cccccc}
 \toprule
 \textbf{Patches ($N$)} & \textbf{Dim ($D$)} & \textbf{CPU Time (s)} & \textbf{GPU Unbatched (s)} & \textbf{GPU Batched (s, Ours)} & \textbf{Speedup vs. CPU} ($\uparrow$) \\
 \midrule
-1,000 & 64 & 0.007 & 0.0446 & 4.8065 & \textbf{0.0$\times$} \\
-5,000 & 64 & 0.187 & 0.1709 & 0.0179 & \textbf{10.4$\times$} \\
-10,000 & 64 & 0.784 & 0.3269 & 0.0075 & \textbf{105.1$\times$} \\
-25,000 & 64 & 5.656 & 0.4012 & 0.0596 & \textbf{94.9$\times$} \\
-50,000 & 64 & 22.625 & 1.3416 & 0.0856 & \textbf{264.4$\times$} \\
-1,000 & 128 & 0.010 & 0.0114 & 0.0014 & \textbf{6.7$\times$} \\
-5,000 & 128 & 0.283 & 0.0681 & 0.0059 & \textbf{48.0$\times$} \\
-10,000 & 128 & 2.102 & 0.2716 & 0.0157 & \textbf{134.0$\times$} \\
-25,000 & 128 & 11.312 & 0.8302 & 0.0395 & \textbf{286.4$\times$} \\
-50,000 & 128 & 45.250 & 1.3416 & 0.0932 & \textbf{485.6$\times$} \\
-1,000 & 256 & 0.021 & 0.0166 & 0.0177 & \textbf{1.2$\times$} \\
-5,000 & 256 & 1.040 & 0.0683 & 0.0033 & \textbf{313.3$\times$} \\
-10,000 & 256 & 3.731 & 0.4304 & 0.0064 & \textbf{580.5$\times$} \\
-25,000 & 256 & 22.625 & 1.8610 & 0.0284 & \textbf{796.7$\times$} \\
-50,000 & 256 & 90.500 & 1.3416 & 0.1120 & \textbf{807.8$\times$} \\
+1,000 & 64 & 0.008 & 0.0169 & 0.0060 & \textbf{1.3$\times$} \\
+5,000 & 64 & 0.149 & 0.0595 & 0.0423 & \textbf{3.5$\times$} \\
+10,000 & 64 & 0.796 & 0.2473 & 0.0155 & \textbf{51.3$\times$} \\
+25,000 & 64 & 5.656 & 0.6246 & 0.0277 & \textbf{204.0$\times$} \\
+50,000 & 64 & 22.625 & 1.3416 & 0.1104 & \textbf{204.9$\times$} \\
+1,000 & 128 & 0.009 & 0.0122 & 0.0010 & \textbf{8.8$\times$} \\
+5,000 & 128 & 0.316 & 0.0962 & 0.0029 & \textbf{108.6$\times$} \\
+10,000 & 128 & 1.770 & 0.2893 & 0.0116 & \textbf{152.3$\times$} \\
+25,000 & 128 & 11.312 & 0.8423 & 0.0349 & \textbf{323.9$\times$} \\
+50,000 & 128 & 45.250 & 1.3416 & 0.0889 & \textbf{509.3$\times$} \\
+1,000 & 256 & 0.020 & 0.0145 & 0.0074 & \textbf{2.7$\times$} \\
+5,000 & 256 & 1.003 & 0.0843 & 0.0032 & \textbf{314.7$\times$} \\
+10,000 & 256 & 3.669 & 0.3731 & 0.0066 & \textbf{555.9$\times$} \\
+25,000 & 256 & 22.625 & 1.8876 & 0.0264 & \textbf{857.2$\times$} \\
+50,000 & 256 & 90.500 & 1.3416 & 0.1035 & \textbf{874.1$\times$} \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}

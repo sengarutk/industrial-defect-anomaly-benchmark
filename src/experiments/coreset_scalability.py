@@ -30,6 +30,12 @@ def run_coreset_scalability_sweep(
     device = torch.device(device_name if device_name else ("cuda" if torch.cuda.is_available() else "cpu"))
     records = []
 
+    # Warmup CUDA context and memory caching to eliminate initial 4.8s initialization spike
+    if device.type == "cuda":
+        dummy = torch.randn(500, 64, device=device)
+        gpu_batched_vectorized(dummy, target_size=50, batch_k=25)
+        torch.cuda.synchronize()
+
     for dim in feature_dims:
         for n in sample_sizes:
             target_size = max(10, int(n * coreset_ratio))
@@ -92,6 +98,7 @@ def run_coreset_scalability_sweep(
         "\\vspace{-2mm}",
         "\\caption{Systems Scalability of PatchCore Coreset Subsampling across Patch Set Size $N \\in [1\\text{k}, 50\\text{k}]$ and Feature Dimension $D \\in [64, 256]$ ($10\\%$ Subsampling Ratio).}",
         "\\label{tab:coreset_scalability}",
+        "\\resizebox{0.95\\textwidth}{!}{%",
         "\\begin{tabular}{cccccc}",
         "\\toprule",
         "\\textbf{Patches ($N$)} & \\textbf{Dim ($D$)} & \\textbf{CPU Time (s)} & \\textbf{GPU Unbatched (s)} & \\textbf{GPU Batched (s, Ours)} & \\textbf{Speedup vs. CPU} ($\\uparrow$) \\\\",
@@ -109,7 +116,7 @@ def run_coreset_scalability_sweep(
 
     lines.extend([
         "\\bottomrule",
-        "\\end{tabular}",
+        "\\end{tabular}}",
         "\\end{table*}"
     ])
 

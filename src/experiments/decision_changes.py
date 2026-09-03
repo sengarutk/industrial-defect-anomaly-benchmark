@@ -161,6 +161,7 @@ def run_decision_change_analysis(
         "\\vspace{-2mm}",
         "\\caption{Operational Decision-Change Attribution & Relief Rates Transitioning from Quantile-99 to Cost-Calibrated Thresholding (CCT) across Asymmetric Defect Escape Cost Ratios $r \\in \\{5, 10, 20, 50\\}$. Values report empirical mean with 95\\% confidence intervals derived from two-stage hierarchical bootstrap resampling ($B = 2,000$). Multiplicity control enforced via Holm-Bonferroni step-down correction at $\\alpha = 0.05$.}",
         "\\label{tab:decision_changes}",
+        "\\resizebox{0.95\\textwidth}{!}{%",
         "\\begin{tabular}{llccccc}",
         "\\toprule",
         "\\textbf{Category} & \\textbf{Method} & \\textbf{Cost Ratio ($r$)} & \\textbf{Total Flips} & \\textbf{Nominal Relief (\\%)} $\\uparrow$ & \\textbf{Defect Escape (\\%)} $\\downarrow$ & \\textbf{CWE} $\\downarrow$ \\\\",
@@ -186,7 +187,7 @@ def run_decision_change_analysis(
 
     lines.extend([
         "\\bottomrule",
-        "\\end{tabular}",
+        "\\end{tabular}}",
         "\\end{table*}"
     ])
 

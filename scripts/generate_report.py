@@ -1,4 +1,6 @@
-﻿import argparse
+import numpy as np
+from typing import Optional, Dict, Any
+import argparse
 import os
 import sys
 import glob
@@ -10,7 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 BOOTSTRAP_CAPTION_NOTE = "Values report empirical mean with 95\\% confidence intervals derived from two-stage hierarchical bootstrap resampling (resampling runs and test items over $B = 2,000$ iterations). Multiplicity control enforced via Holm-Bonferroni step-down correction at $\\alpha = 0.05$."
 
 
-def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
+def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str, runs_df: Optional[pd.DataFrame] = None):
     os.makedirs(os.path.dirname(output_tex), exist_ok=True)
     lines = [
         "\\begin{table*}[t]",
@@ -19,6 +21,7 @@ def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
         "\\vspace{-2mm}",
         f"\\caption{{Main Benchmark Results on MVTec AD across 7 Categories (Mean $\\pm$ Std across seeds). {BOOTSTRAP_CAPTION_NOTE}}}",
         "\\label{tab:main_results}",
+        "\\resizebox{0.95\\textwidth}{!}{%",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
         "\\textbf{Category} & \\textbf{Method} & \\textbf{Image AUROC} $\\uparrow$ & \\textbf{Pixel AUROC} $\\uparrow$ & \\textbf{AU-PRO} $\\uparrow$ & \\textbf{Robustness MRD} $\\downarrow$ \\\\",
@@ -34,7 +37,15 @@ def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
                 img_auroc = f"{row.get('image_auroc_mean', 0.0):.4f} \\pm {row.get('image_auroc_std', 0.0):.4f}"
                 pix_auroc = f"{row.get('pixel_auroc_mean', 0.0):.4f} \\pm {row.get('pixel_auroc_std', 0.0):.4f}"
                 aupro = f"{row.get('aupro_mean', 0.0):.4f} \\pm {row.get('aupro_std', 0.0):.4f}"
-                mrd = f"{row.get('mrd_mean', 0.0):.4f} \\pm {row.get('mrd_std', 0.0):.4f}"
+                if runs_df is not None and "mrd_image_auroc" in runs_df.columns:
+                    m_sub = runs_df[(runs_df["category"] == cat) & (runs_df["method"] == row["method"])]
+                    if len(m_sub) > 0:
+                        mrd_vals = np.maximum(0.0, m_sub["mrd_image_auroc"].values)
+                        mrd = f"{mrd_vals.mean():.4f} \\pm {mrd_vals.std():.4f}"
+                    else:
+                        mrd = f"{max(0.0, float(row.get('mrd_mean', 0.0))):.4f} \\pm {row.get('mrd_std', 0.0):.4f}"
+                else:
+                    mrd = f"{max(0.0, float(row.get('mrd_mean', 0.0))):.4f} \\pm {row.get('mrd_std', 0.0):.4f}"
                 lines.append(f"{cat} & {method_name} & ${img_auroc}$ & ${pix_auroc}$ & ${aupro}$ & ${mrd}$ \\\\")
             lines.append("\\midrule")
 
@@ -43,7 +54,7 @@ def generate_main_results_table(summary_df: pd.DataFrame, output_tex: str):
 
     lines.extend([
         "\\bottomrule",
-        "\\end{tabular}",
+        "\\end{tabular}}",
         "\\end{table*}"
     ])
 
@@ -125,6 +136,7 @@ def generate_robustness_table(runs_df: pd.DataFrame, output_tex: str):
         "\\vspace{-2mm}",
         f"\\caption{{Out-of-Distribution Robustness Degradation and Signed Performance Changes across 18 Environmental Conditions. {BOOTSTRAP_CAPTION_NOTE}}}",
         "\\label{tab:robustness_mrd_mpc}",
+        "\\resizebox{0.95\\textwidth}{!}{%",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
         "\\textbf{Category} & \\textbf{Method} & \\textbf{Clean AUROC} & \\textbf{Non-Neg MRD (AUROC)} $\\downarrow$ & \\textbf{Non-Neg MRD (AU-PRO)} $\\downarrow$ & \\textbf{Signed MPC (AUROC)} $\\Delta$ \\\\",
@@ -139,12 +151,26 @@ def generate_robustness_table(runs_df: pd.DataFrame, output_tex: str):
             for m in methods:
                 m_df = c_df[c_df["method"] == m]
                 clean_auroc = m_df["image_auroc"].mean() if "image_auroc" in m_df.columns else 0.0
-                mrd_auroc = m_df.get("mrd_image_auroc", pd.Series([0.0])).mean()
-                mrd_aupro = m_df.get("mrd_aupro", pd.Series([0.0])).mean()
-                mpc_auroc = m_df.get("mean_performance_change_auroc", pd.Series([mrd_auroc])).mean()
+                raw_mrd_auroc = m_df.get("mrd_image_auroc", pd.Series([0.0])).mean()
+                raw_mrd_aupro = m_df.get("mrd_aupro", pd.Series([0.0])).mean()
+                mpc_auroc = m_df.get("mean_performance_change_auroc", pd.Series([raw_mrd_auroc])).mean()
+
+                # Enforce strictly non-negative values for MRD columns
+                mrd_auroc = max(0.0, float(raw_mrd_auroc))
+                mrd_aupro = max(0.0, float(raw_mrd_aupro))
+
+                m_raw = str(m).lower()
+                if "patch" in m_raw:
+                    m_name = "PatchCore"
+                elif "padim" in m_raw:
+                    m_name = "PaDiM"
+                elif "autoencoder" in m_raw:
+                    m_name = "ConvAutoencoder"
+                else:
+                    m_name = str(m).capitalize()
 
                 lines.append(
-                    f"{cat} & {str(m).capitalize()} & {clean_auroc:.4f} & {mrd_auroc:.4f} & {mrd_aupro:.4f} & {mpc_auroc:+.4f} \\\\"
+                    f"{cat} & {m_name} & {clean_auroc:.4f} & {mrd_auroc:.4f} & {mrd_aupro:.4f} & ${mpc_auroc:+.4f}$ \\\\"
                 )
             lines.append("\\midrule")
 
@@ -153,7 +179,7 @@ def generate_robustness_table(runs_df: pd.DataFrame, output_tex: str):
 
     lines.extend([
         "\\bottomrule",
-        "\\end{tabular}",
+        "\\end{tabular}}",
         "\\end{table*}"
     ])
 
@@ -171,6 +197,7 @@ def generate_operational_table(operational_df: pd.DataFrame, output_tex: str):
         "\\vspace{-2mm}",
         f"\\caption{{Operational Inspection Benchmark under Constrained Operator Alert Budgets and Asymmetric Escape Costs across 7 Categories. {BOOTSTRAP_CAPTION_NOTE}}}",
         "\\label{tab:operational_results}",
+        "\\resizebox{0.95\\textwidth}{!}{%",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
         "\\textbf{Category} & \\textbf{Method} & \\textbf{TPR @ 5 Alarms/1k} $\\uparrow$ & \\textbf{MD @ 1k (Escapes)} $\\downarrow$ & \\textbf{CWE ($r=10$)} $\\downarrow$ & \\textbf{P(Overload)} $\\downarrow$ \\\\",
@@ -194,7 +221,7 @@ def generate_operational_table(operational_df: pd.DataFrame, output_tex: str):
 
     lines.extend([
         "\\bottomrule",
-        "\\end{tabular}",
+        "\\end{tabular}}",
         "\\end{table*}"
     ])
 
@@ -221,7 +248,7 @@ def main():
         deploy_tex = os.path.join(args.tables_dir, "deployment_profiling.tex")
         robustness_tex = os.path.join(args.tables_dir, "robustness_mrd_mpc.tex")
 
-        generate_main_results_table(summary_df, main_tex)
+        generate_main_results_table(summary_df, main_tex, runs_df)
         generate_deployment_table(summary_df, deploy_tex)
         generate_robustness_table(runs_df, robustness_tex)
 

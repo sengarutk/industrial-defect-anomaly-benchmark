@@ -4,6 +4,7 @@
 \vspace{-2mm}
 \caption{Operational Inspection Benchmark under Constrained Operator Alert Budgets and Asymmetric Escape Costs across 7 Categories. Values report empirical mean with 95\% confidence intervals derived from two-stage hierarchical bootstrap resampling (resampling runs and test items over $B = 2,000$ iterations). Multiplicity control enforced via Holm-Bonferroni step-down correction at $\alpha = 0.05$.}
 \label{tab:operational_results}
+\resizebox{0.95\textwidth}{!}{%
 \begin{tabular}{llcccc}
 \toprule
 \textbf{Category} & \textbf{Method} & \textbf{TPR @ 5 Alarms/1k} $\uparrow$ & \textbf{MD @ 1k (Escapes)} $\downarrow$ & \textbf{CWE ($r=10$)} $\downarrow$ & \textbf{P(Overload)} $\downarrow$ \\
@@ -36,5 +37,5 @@ metal_nut & Autoencoder & 0.000 [0.000, 0.018] & 1000.0 [981.9, 1000.0] & 8.0957
 metal_nut & Padim & 0.602 [0.552, 0.935] & 365.6 [61.5, 432.5] & 2.9652 [0.5071, 3.5478] & 0.067 \\
 metal_nut & Patchcore & 0.978 [0.964, 0.997] & 21.5 [3.4, 34.9] & 0.1826 [0.0377, 0.2986] & 0.133 \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table*}

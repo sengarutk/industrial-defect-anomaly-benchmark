@@ -36,17 +36,30 @@ def compute_cost_weighted_error(
     labels: np.ndarray,
     scores: np.ndarray,
     threshold: float,
-    cost_ratio: float = 10.0
+    cost_ratio: float = 10.0,
+    prior: Optional[float] = None
 ) -> float:
     """
     Computes Asymmetric Cost-Weighted Error (CWE) per inspected part.
-    CWE = (FP + cost_ratio * FN) / Total Items.
+    If prior is provided (e.g. 0.01 for factory streams):
+      CWE = (1 - prior) * FPR * 1.0 + prior * FNR * cost_ratio
+    Otherwise:
+      CWE = (FP + cost_ratio * FN) / Total Items.
     """
     labels = np.asarray(labels)
     scores = np.asarray(scores)
     n_total = len(labels)
     if n_total == 0:
         return 0.0
+
+    if prior is not None:
+        nom_mask = (labels == 0)
+        def_mask = (labels == 1)
+        n_nom = np.sum(nom_mask)
+        n_def = np.sum(def_mask)
+        fpr = float(np.sum(scores[nom_mask] >= threshold) / n_nom) if n_nom > 0 else 0.0
+        fnr = float(np.sum(scores[def_mask] < threshold) / n_def) if n_def > 0 else 0.0
+        return float((1.0 - prior) * fpr * 1.0 + prior * fnr * cost_ratio)
 
     fp = np.sum((labels == 0) & (scores >= threshold))
     fn = np.sum((labels == 1) & (scores < threshold))

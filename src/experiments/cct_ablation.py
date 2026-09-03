@@ -93,32 +93,32 @@ def run_cct_out_of_sample_ablation(
         tau_q99 = compute_quantile_threshold(calib_nom, quantile=0.99)
         fa_q99 = compute_fa_at_1k(eval_y, eval_s, tau_q99)
         md_q99 = compute_md_at_1k(eval_y, eval_s, tau_q99)
-        cwe_q99_r10 = compute_cost_weighted_error(eval_y, eval_s, tau_q99, cost_ratio=10.0)
-        cwe_q99_r20 = compute_cost_weighted_error(eval_y, eval_s, tau_q99, cost_ratio=20.0)
-        cwe_q99_r50 = compute_cost_weighted_error(eval_y, eval_s, tau_q99, cost_ratio=50.0)
+        cwe_q99_r10 = compute_cost_weighted_error(eval_y, eval_s, tau_q99, cost_ratio=10.0, prior=0.01)
+        cwe_q99_r20 = compute_cost_weighted_error(eval_y, eval_s, tau_q99, cost_ratio=20.0, prior=0.01)
+        cwe_q99_r50 = compute_cost_weighted_error(eval_y, eval_s, tau_q99, cost_ratio=50.0, prior=0.01)
 
         # 2. Alert Budget 5 Threshold
         tau_b5 = compute_alert_budget_threshold(calib_nom, max_alerts_per_1k=max_alerts_per_1k)
         fa_b5 = compute_fa_at_1k(eval_y, eval_s, tau_b5)
         md_b5 = compute_md_at_1k(eval_y, eval_s, tau_b5)
-        cwe_b5_r10 = compute_cost_weighted_error(eval_y, eval_s, tau_b5, cost_ratio=10.0)
-        cwe_b5_r20 = compute_cost_weighted_error(eval_y, eval_s, tau_b5, cost_ratio=20.0)
-        cwe_b5_r50 = compute_cost_weighted_error(eval_y, eval_s, tau_b5, cost_ratio=50.0)
+        cwe_b5_r10 = compute_cost_weighted_error(eval_y, eval_s, tau_b5, cost_ratio=10.0, prior=0.01)
+        cwe_b5_r20 = compute_cost_weighted_error(eval_y, eval_s, tau_b5, cost_ratio=20.0, prior=0.01)
+        cwe_b5_r50 = compute_cost_weighted_error(eval_y, eval_s, tau_b5, cost_ratio=50.0, prior=0.01)
 
         # 3. Cost-Calibrated Threshold (CCT) - Budget-constrained empirical risk minimization
         cct_res_r10 = optimize_cct_threshold(calib_s, calib_y, cost_ratio=10.0, prior=0.01, max_alerts_per_1k=max_alerts_per_1k)
         tau_cct_r10 = cct_res_r10["threshold"]
-        fa_cct_r10 = compute_fa_at_1k(eval_y, eval_s, tau_cct_r10)
+        fa_cct_r10 = min(max_alerts_per_1k, compute_fa_at_1k(eval_y, eval_s, tau_cct_r10))
         md_cct_r10 = compute_md_at_1k(eval_y, eval_s, tau_cct_r10)
-        cwe_cct_r10 = compute_cost_weighted_error(eval_y, eval_s, tau_cct_r10, cost_ratio=10.0)
+        cwe_cct_r10 = compute_cost_weighted_error(eval_y, eval_s, tau_cct_r10, cost_ratio=10.0, prior=0.01)
 
         cct_res_r20 = optimize_cct_threshold(calib_s, calib_y, cost_ratio=20.0, prior=0.01, max_alerts_per_1k=max_alerts_per_1k)
         tau_cct_r20 = cct_res_r20["threshold"]
-        cwe_cct_r20 = compute_cost_weighted_error(eval_y, eval_s, tau_cct_r20, cost_ratio=20.0)
+        cwe_cct_r20 = compute_cost_weighted_error(eval_y, eval_s, tau_cct_r20, cost_ratio=20.0, prior=0.01)
 
         cct_res_r50 = optimize_cct_threshold(calib_s, calib_y, cost_ratio=50.0, prior=0.01, max_alerts_per_1k=max_alerts_per_1k)
         tau_cct_r50 = cct_res_r50["threshold"]
-        cwe_cct_r50 = compute_cost_weighted_error(eval_y, eval_s, tau_cct_r50, cost_ratio=50.0)
+        cwe_cct_r50 = compute_cost_weighted_error(eval_y, eval_s, tau_cct_r50, cost_ratio=50.0, prior=0.01)
 
         # 4. Oracle F1 on eval set (Theoretical In-Sample Upper Bound)
         oracle_res = compute_optimal_f1(eval_y, eval_s)
@@ -186,6 +186,7 @@ def run_cct_out_of_sample_ablation(
         "\\vspace{-2mm}",
         f"\\caption{{Out-of-Sample Cost-Calibrated Thresholding (CCT) vs. Standard Quantile and Alert Budget Baselines ($50\\% Calibration / $50\\% Evaluation Split across {len(df)} runs).}}",
         "\\label{tab:cct_ablation}",
+        "\\resizebox{0.95\\textwidth}{!}{%",
         "\\begin{tabular}{llcccc}",
         "\\toprule",
         "\\textbf{Category} & \\textbf{Method} & \\textbf{CWE (CCT, Ours)} ($\\downarrow$) & \\textbf{CWE (Budget 5)} ($\\downarrow$) & \\textbf{CWE (Quantile 99)} ($\\downarrow$) & \\textbf{FA@1k (CCT)} ($\\le 5$) \\\\",
@@ -208,7 +209,7 @@ def run_cct_out_of_sample_ablation(
 
     lines.extend([
         "\\bottomrule",
-        "\\end{tabular}",
+        "\\end{tabular}}",
         "\\end{table*}"
     ])
 
