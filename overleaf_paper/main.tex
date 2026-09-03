@@ -1,0 +1,93 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+\usepackage{times}
+\usepackage{epsfig}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{microtype}
+\usepackage{subcaption}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[pagebackref=true,breaklinks=true,letterpaper=true,colorlinks,bookmarks=false]{hyperref}
+
+\title{Beyond AUROC: Cost-Calibrated Thresholding and Operational Evaluation of Unsupervised Industrial Anomaly Detectors}
+
+\author{Utkarsh Sengar\\
+Department of Computer Science\\
+{\tt\small sengarutkarsh@gmail.com}
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Standard visual anomaly detection benchmarks evaluate algorithms using threshold-independent ranking metrics ($Image\ AUROC$, $AU\text{-}PRO$), implicitly assuming infinite alarm tolerance and symmetric error penalties. In high-throughput industrial manufacturing, inspection viability is bounded by human reviewer capacity ($\le 5\text{ alarms}/1,000\text{ items}$) and asymmetric escape costs ($c_{\text{miss}} \gg c_{\text{false}}$). We introduce an operational evaluation framework incorporating false-alarm budgets and non-IID factory stream dynamics. We propose \textbf{Cost-Calibrated Thresholding (CCT)}, an empirical risk minimization decision rule that optimizes operational operating cutoffs out-of-sample under strict false-alarm constraints. Evaluating across seven MVTec AD categories (63 experimental runs) with two-stage hierarchical bootstrap confidence intervals ($B = 2,000$) and Holm-Bonferroni multiplicity control, CCT reduces cost-weighted error by up to $4.5\times$ relative to standard quantile baselines under $10\times$ escape cost ratios. Furthermore, our GPU-vectorized coreset selection delivers a $274.6\times$ throughput speedup over CPU sequential greedy selection with exact coverage radius parity. Code, score archives, and execution harnesses are publicly available.
+\end{abstract}
+
+\section{Introduction}
+In industrial manufacturing pipelines, automated visual inspection viability is strictly constrained by operator review bandwidth ($\le 5\text{--}10\text{ alarms/1,000 items}$) and asymmetric escape penalties ($c_{\text{miss}} \gg c_{\text{false}}$). Standard evaluation protocols rely heavily on Area Under the ROC Curve ($AUROC$) and Per-Region Overlap ($AU\text{-}PRO$) \cite{bergmann2019mvtec,bergmann2021uninformed}. However, these metrics obscure operational failure modes by averaging ranking performance across unrealistic operating regimes (such as 50\% false-alarm rates).
+
+\section{Benchmark \& Experimental Setup}
+We evaluate three core paradigms across seven representative MVTec AD categories \cite{bergmann2019mvtec} over three random seeds: PatchCore \cite{roth2022towards}, PaDiM \cite{defard2021padim}, and Convolutional Autoencoders. All models are implemented in PyTorch \cite{paszke2019pytorch}.
+
+\input{tables/main_results.tex}
+
+\section{Deployment \& Hardware Profiling}
+We evaluate synchronized dual-latency timing ($T_{\text{model}}$ vs. $T_{\text{e2e}}$) and peak VRAM footprints across all baselines on an NVIDIA RTX 4050 Laptop GPU.
+
+\input{tables/deployment_profiling.tex}
+
+\section{Physical Perturbation Robustness}
+We stress-test models across 18 controlled physical environmental conditions spanning optical defocus, motion blur, brightness loss, sensor noise, JPEG compression, and downscaling.
+
+\input{tables/robustness_mrd_mpc.tex}
+
+\section{Operational Evaluation \& Cost-Calibrated Thresholding}
+To address deployment constraints, we formulate Cost-Calibrated Thresholding (CCT) as a constrained empirical risk minimization problem under operator alert capacity bounds. Statistical significance is verified using paired Wilcoxon signed-rank tests \cite{wilcoxon1945individual} with Holm-Bonferroni step-down multiplicity correction \cite{holm1979simple}, and uncertainty is quantified via two-stage hierarchical bootstrap resampling \cite{efron1992bootstrap}. Figure~\ref{fig:operational_systems_grid} illustrates operational trade-offs, defect recall under budget bounds, cost curves, and throughput scaling.
+
+\input{tables/operational_results.tex}
+\input{tables/cct_ablation.tex}
+
+\begin{figure*}[t]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\linewidth]{figures/fa_vs_md_tradeoff.png}
+    \caption{Operational Operating Trade-off ($\text{FA@1k}$ vs. $\text{MD@1k}$).}
+    \label{fig:fa_vs_md}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\linewidth]{figures/tpr_vs_alert_budget.png}
+    \caption{Defect Recall under Operator False Alarm Budgets.}
+    \label{fig:tpr_budget}
+\end{subfigure}
+\vspace{2mm}
+\begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\linewidth]{figures/cost_weighted_error_curves.png}
+    \caption{Cost-Weighted Error vs. Decision Cutoff across $r \in \{10, 20, 50\}$.}
+    \label{fig:cwe_curves}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\linewidth]{figures/coreset_scalability.png}
+    \caption{GPU Batched Coreset Throughput Scaling vs. CPU ($D=128$).}
+    \label{fig:coreset_scale}
+\end{subfigure}
+\caption{Operational evaluation, cost-calibrated trade-offs, and systems scaling across 7 MVTec AD categories.}
+\label{fig:operational_systems_grid}
+\end{figure*}
+
+\section{Systems-Level Coreset Scalability}
+We benchmark greedy $k$-center coreset reduction \cite{sener2018active,roth2022towards} across patch scales $N \in [1\text{k}, 50\text{k}]$ and dimensions $D \in [64, 256]$. Our GPU-vectorized matrix formulation delivers sustained throughput gains while maintaining identical coverage radius.
+
+\input{tables/coreset_scalability.tex}
+
+\section{Conclusion}
+Our findings demonstrate that ranking by $AUROC$ frequently diverges from optimal deployment under real operational alert budgets and asymmetric costs. CCT provides an empirical, leakage-free operational decision rule.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

@@ -89,8 +89,11 @@ def plot_pareto_frontier(summary_df_or_path: Union[str, pd.DataFrame], output_pa
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(title="Method", loc="lower right", frameon=True, framealpha=0.9)
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -129,8 +132,11 @@ def plot_robustness_heatmap(csv_path_or_df: Union[str, pd.DataFrame], output_pat
     ax.set_xlabel("Corruption Severity Level", fontsize=11, fontweight="bold")
     ax.set_ylabel("Environmental Degradation Type", fontsize=11, fontweight="bold")
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -169,8 +175,11 @@ def plot_calibration_curve(reliability_data: Dict[str, Any], ece_score: float, o
     )
 
     ax.legend(loc="lower right")
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -224,8 +233,11 @@ def plot_robust_training_ablation(comparison_data: Union[Dict[str, Any], pd.Data
                     textcoords="offset points",
                     ha="center", va="bottom", fontsize=10)
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -280,8 +292,11 @@ def plot_fa_vs_md_tradeoff(
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(title="Method", loc="upper right")
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -335,8 +350,11 @@ def plot_tpr_vs_alert_budget(
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(title="Method", loc="lower right")
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -390,8 +408,11 @@ def plot_cost_weighted_error_curves(
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(loc="upper center")
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -437,8 +458,11 @@ def plot_operator_review_overload(
         ax.set_ylabel("Overload Probability P(Overload)", fontsize=11, fontweight="bold")
         ax.set_title("Operator Overload Probability (Capacity = 60 items/window)", fontsize=13, fontweight="bold", pad=12)
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -476,8 +500,11 @@ def plot_cct_cost_tradeoff(
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(loc="upper right", frameon=True)
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -503,7 +530,7 @@ def plot_coreset_scalability(
     ax1.set_yscale("log")
     ax1.set_xlabel("Number of Candidate Patches (N)", fontsize=11, fontweight="bold")
     ax1.set_ylabel("Runtime (seconds, log scale)", fontsize=11, fontweight="bold")
-    ax1.set_title("Coreset Selection Scaling (D=128)", fontsize=12, fontweight="bold")
+    ax1.set_title("Coreset Runtime Scaling (D=128)", fontsize=12, fontweight="bold")
     ax1.grid(True, linestyle="--", alpha=0.5)
     ax1.legend()
 
@@ -514,12 +541,15 @@ def plot_coreset_scalability(
     ax2.set_xscale("log")
     ax2.set_xlabel("Number of Candidate Patches (N)", fontsize=11, fontweight="bold")
     ax2.set_ylabel("Throughput Speedup vs. CPU (x)", fontsize=11, fontweight="bold")
-    ax2.set_title("GPU Acceleration Factor vs CPU", fontsize=12, fontweight="bold")
+    ax2.set_title("Speedup Factor vs. Sequential CPU", fontsize=12, fontweight="bold")
     ax2.grid(True, linestyle="--", alpha=0.5)
     ax2.legend()
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path
 
@@ -555,7 +585,10 @@ def plot_decision_confusion_shifts(
     ax.grid(True, linestyle="--", alpha=0.4, axis="y")
     ax.legend(loc="upper right", frameon=True)
 
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.tight_layout(pad=1.2)
+    png_path = output_path if output_path.endswith(".png") else (os.path.splitext(output_path)[0] + ".png")
+    pdf_path = os.path.splitext(output_path)[0] + ".pdf"
+    plt.savefig(png_path, dpi=400, bbox_inches="tight")
+    plt.savefig(pdf_path, bbox_inches="tight")
     plt.close(fig)
     return output_path

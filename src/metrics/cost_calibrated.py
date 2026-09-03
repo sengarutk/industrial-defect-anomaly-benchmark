@@ -90,21 +90,28 @@ class CostCalibratedThresholdOptimizer:
         nom_scores = val_scores[val_labels == 0]
         max_allowed_fpr = (max_alerts_per_1k / 1000.0) if max_alerts_per_1k is not None else 1.0
 
-        # High-resolution sweep over sorted unique validation scores
-        thresholds = np.sort(np.unique(val_scores))
-        # Add endpoints
-        thresholds = np.concatenate([[thresholds[0] - 1e-5], thresholds, [thresholds[-1] + 1e-5]])
-
         n_nom = len(nom_scores)
         n_def = np.sum(val_labels == 1)
+
+        tau_budget = float("-inf")
+        if max_alerts_per_1k is not None and n_nom > 0:
+            target_quantile = max(0.0, min(1.0, 1.0 - max_allowed_fpr))
+            tau_budget = float(np.quantile(nom_scores, target_quantile))
+
+        # High-resolution sweep over sorted unique validation scores
+        thresholds = np.sort(np.unique(val_scores))
+        thresholds = np.concatenate([[thresholds[0] - 1e-5], thresholds, [thresholds[-1] + 1e-5]])
 
         best_tau = float(thresholds[0])
         min_cost = float("inf")
         achieved_fpr = 0.0
         budget_satisfied = False
 
-        # First pass: find lowest cost satisfying FPR budget
+        # First pass: find lowest cost strictly satisfying FPR budget and tau >= tau_budget
         for tau in thresholds:
+            if max_alerts_per_1k is not None and tau < tau_budget:
+                continue
+
             fpr = float(np.sum(nom_scores >= tau) / n_nom) if n_nom > 0 else 0.0
             fnr = float(np.sum(val_scores[val_labels == 1] < tau) / n_def) if n_def > 0 else 0.0
 
@@ -116,10 +123,16 @@ class CostCalibratedThresholdOptimizer:
                     achieved_fpr = fpr
                     budget_satisfied = True
 
-        # Fallback if unconstrained or no point satisfies budget
+        # Fallback if no point satisfies budget or unconstrained
         if not budget_satisfied:
-            if n_nom > 0:
-                best_tau = float(np.quantile(nom_scores, max(0.0, min(1.0, 1.0 - max_allowed_fpr))))
+            if n_nom > 0 and max_alerts_per_1k is not None:
+                best_tau = tau_budget
+                achieved_fpr = float(np.sum(nom_scores >= best_tau) / n_nom)
+                fnr = float(np.sum(val_scores[val_labels == 1] < best_tau) / n_def) if n_def > 0 else 0.0
+                min_cost = (1.0 - prior) * achieved_fpr * 1.0 + prior * fnr * cost_ratio
+                budget_satisfied = True
+            elif n_nom > 0:
+                best_tau = float(thresholds[0])
                 achieved_fpr = float(np.sum(nom_scores >= best_tau) / n_nom)
                 fnr = float(np.sum(val_scores[val_labels == 1] < best_tau) / n_def) if n_def > 0 else 0.0
                 min_cost = (1.0 - prior) * achieved_fpr * 1.0 + prior * fnr * cost_ratio
@@ -128,8 +141,16 @@ class CostCalibratedThresholdOptimizer:
                 min_cost = 0.0
                 achieved_fpr = 0.0
 
+        # Enforce budget lower bound: strictly clamp tau_CCT >= tau_budget if max_alerts_per_1k is specified
+        if max_alerts_per_1k is not None and n_nom > 0:
+            if best_tau < tau_budget:
+                best_tau = tau_budget
+                achieved_fpr = float(np.sum(nom_scores >= best_tau) / n_nom)
+                fnr = float(np.sum(val_scores[val_labels == 1] < best_tau) / n_def) if n_def > 0 else 0.0
+                min_cost = (1.0 - prior) * achieved_fpr * 1.0 + prior * fnr * cost_ratio
+
         return {
-            "threshold": best_tau,
+            "threshold": float(best_tau),
             "min_expected_cost": float(min_cost),
             "achieved_val_fpr": float(achieved_fpr),
             "budget_satisfied": budget_satisfied

@@ -89,6 +89,7 @@ def run_coreset_scalability_sweep(
         "\\begin{table*}[t]",
         "\\centering",
         "\\small",
+        "\\vspace{-2mm}",
         "\\caption{Systems Scalability of PatchCore Coreset Subsampling across Patch Set Size $N \\in [1\\text{k}, 50\\text{k}]$ and Feature Dimension $D \\in [64, 256]$ ($10\\%$ Subsampling Ratio).}",
         "\\label{tab:coreset_scalability}",
         "\\begin{tabular}{cccccc}",
