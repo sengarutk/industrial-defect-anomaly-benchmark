@@ -286,7 +286,7 @@ def plot_fa_vs_md_tradeoff(
 
     ax.set_xlabel("False Alarms per 1,000 Normal Items (FA@1k) [↓]", fontsize=11, fontweight="bold")
     ax.set_ylabel("Missed Defects per 1,000 Items (MD@1k) [↓]", fontsize=11, fontweight="bold")
-    ax.set_title("Operational Operating Trade-off (FA@1k vs. MD@1k)", fontsize=13, fontweight="bold", pad=12)
+    # ax.set_title("Operational Operating Trade-off (FA@1k vs. MD@1k)", fontsize=13, fontweight="bold", pad=12)
     ax.set_xlim(-1, 50)
     ax.set_ylim(-10, 1000)
     ax.grid(True, linestyle="--", alpha=0.5)
@@ -344,7 +344,7 @@ def plot_tpr_vs_alert_budget(
 
     ax.set_xlabel("Allowed False Alarm Budget (Alarms per 1,000 Items) [↑]", fontsize=11, fontweight="bold")
     ax.set_ylabel("Achieved Defect Detection Rate (TPR) [↑]", fontsize=11, fontweight="bold")
-    ax.set_title("Defect Recall Under Strict Operator Alarm Budgets", fontsize=13, fontweight="bold", pad=12)
+    # ax.set_title("Defect Recall Under Strict Operator Alarm Budgets", fontsize=13, fontweight="bold", pad=12)
     ax.set_xlim(0, max_budget + 1)
     ax.set_ylim(0.0, 1.05)
     ax.grid(True, linestyle="--", alpha=0.5)
@@ -404,7 +404,7 @@ def plot_cost_weighted_error_curves(
 
     ax.set_xlabel("Normalized Decision Threshold (τ) [0, 1]", fontsize=11, fontweight="bold")
     ax.set_ylabel("Average Cost per Inspected Item (CWE) [↓]", fontsize=11, fontweight="bold")
-    ax.set_title("Asymmetric Cost-Weighted Error vs. Decision Cutoff", fontsize=13, fontweight="bold", pad=12)
+    # ax.set_title("Asymmetric Cost-Weighted Error vs. Decision Cutoff", fontsize=13, fontweight="bold", pad=12)
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(loc="upper center")
 
@@ -530,7 +530,7 @@ def plot_coreset_scalability(
     ax1.set_yscale("log")
     ax1.set_xlabel("Number of Candidate Patches (N)", fontsize=11, fontweight="bold")
     ax1.set_ylabel("Runtime (seconds, log scale)", fontsize=11, fontweight="bold")
-    ax1.set_title("Coreset Runtime Scaling (D=128)", fontsize=12, fontweight="bold")
+    # ax1.set_title("Coreset Runtime Scaling (D=128)", fontsize=12, fontweight="bold")
     ax1.grid(True, linestyle="--", alpha=0.5)
     ax1.legend()
 
@@ -541,7 +541,7 @@ def plot_coreset_scalability(
     ax2.set_xscale("log")
     ax2.set_xlabel("Number of Candidate Patches (N)", fontsize=11, fontweight="bold")
     ax2.set_ylabel("Throughput Speedup vs. CPU (x)", fontsize=11, fontweight="bold")
-    ax2.set_title("Speedup Factor vs. Sequential CPU", fontsize=12, fontweight="bold")
+    # ax2.set_title("Speedup Factor vs. Sequential CPU", fontsize=12, fontweight="bold")
     ax2.grid(True, linestyle="--", alpha=0.5)
     ax2.legend()
 
