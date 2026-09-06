@@ -1,10 +1,10 @@
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \small
 \vspace{-2mm}
 \caption{Out-of-Sample Cost-Calibrated Thresholding (CCT) vs. Standard Quantile and Alert Budget Baselines ($50\% Calibration / $50\% Evaluation Split across 63 runs).}
 \label{tab:cct_ablation}
-\resizebox{0.95\textwidth}{!}{%
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{llcccc}
 \toprule
 \textbf{Category} & \textbf{Method} & \textbf{CWE (CCT, Ours)} ($\downarrow$) & \textbf{CWE (Budget 5)} ($\downarrow$) & \textbf{CWE (Quantile 99)} ($\downarrow$) & \textbf{FA@1k (CCT)} ($\le 5$) \\
@@ -45,4 +45,4 @@
  & PatchCore & $0.0943 \pm 0.1523$ & $0.1214 \pm 0.1363$ & $0.1214 \pm 0.1363$ & 1.7 \\
 \bottomrule
 \end{tabular}}
-\end{table*}
+\end{table}

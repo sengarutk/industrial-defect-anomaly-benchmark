@@ -121,5 +121,6 @@ def compute_aupro(
         clipped_pros.append(clipped_pros[-1])
 
     # Trapezoidal integration normalized by max_fpr
-    aupro_val = np.trapz(clipped_pros, clipped_fprs) / max_fpr
+    _trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
+    aupro_val = _trapz(clipped_pros, clipped_fprs) / max_fpr
     return float(np.clip(aupro_val, 0.0, 1.0))

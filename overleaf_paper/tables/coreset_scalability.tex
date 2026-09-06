@@ -1,10 +1,10 @@
-\begin{table*}[t]
+\begin{table}[htbp]
 \centering
 \small
 \vspace{-2mm}
 \caption{Systems Scalability of PatchCore Coreset Subsampling across Patch Set Size $N \in [1\text{k}, 50\text{k}]$ and Feature Dimension $D \in [64, 256]$ ($10\%$ Subsampling Ratio).}
 \label{tab:coreset_scalability}
-\resizebox{0.95\textwidth}{!}{%
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{cccccc}
 \toprule
 \textbf{Patches ($N$)} & \textbf{Dim ($D$)} & \textbf{CPU Time (s)} & \textbf{GPU Unbatched (s)} & \textbf{GPU Batched (s, Ours)} & \textbf{Speedup vs. CPU} ($\uparrow$) \\
@@ -26,4 +26,4 @@
 50,000 & 256 & 90.500 & 1.3416 & 0.1060 & \textbf{853.7$\times$} \\
 \bottomrule
 \end{tabular}}
-\end{table*}
+\end{table}

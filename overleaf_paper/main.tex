@@ -47,6 +47,12 @@ We stress-test models across 18 controlled physical environmental conditions spa
 \input{tables/robustness_mrd_mpc.tex}
 
 \section{Operational Evaluation \& Cost-Calibrated Thresholding}
+To address deployment constraints, we formulate Cost-Calibrated Thresholding (CCT) as a constrained empirical risk minimization problem under operator alert capacity bounds. Statistical significance is verified using paired Wilcoxon signed-rank tests \cite{wilcoxon1945individual} with Holm-Bonferroni step-down multiplicity correction \cite{holm1979simple}, and uncertainty is quantified via two-stage hierarchical bootstrap resampling \cite{efron1992bootstrap}. Figure~\ref{fig:operational_systems_grid} illustrates operational trade-offs, defect recall under budget bounds, cost curves, and throughput scaling.
+
+\input{tables/operational_results.tex}
+\input{tables/cct_ablation.tex}
+
+\section{Systems-Level Coreset Scalability}
 \begin{figure*}[t]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
@@ -75,13 +81,6 @@ We stress-test models across 18 controlled physical environmental conditions spa
 \caption{Operational evaluation, cost-calibrated trade-offs, and systems scaling across 7 MVTec AD categories.}
 \label{fig:operational_systems_grid}
 \end{figure*}
-
-To address deployment constraints, we formulate Cost-Calibrated Thresholding (CCT) as a constrained empirical risk minimization problem under operator alert capacity bounds. Statistical significance is verified using paired Wilcoxon signed-rank tests \cite{wilcoxon1945individual} with Holm-Bonferroni step-down multiplicity correction \cite{holm1979simple}, and uncertainty is quantified via two-stage hierarchical bootstrap resampling \cite{efron1992bootstrap}. Figure~\ref{fig:operational_systems_grid} illustrates operational trade-offs, defect recall under budget bounds, cost curves, and throughput scaling.
-
-\input{tables/operational_results.tex}
-\input{tables/cct_ablation.tex}
-
-\section{Systems-Level Coreset Scalability}
 We benchmark greedy $k$-center coreset reduction \cite{sener2018active,roth2022towards} across patch scales $N \in [1\text{k}, 50\text{k}]$ and dimensions $D \in [64, 256]$. Our GPU-vectorized matrix formulation delivers sustained throughput gains while maintaining identical coverage radius.
 
 \input{tables/coreset_scalability.tex}

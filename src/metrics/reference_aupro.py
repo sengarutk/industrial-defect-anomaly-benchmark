@@ -91,5 +91,6 @@ def compute_aupro_reference(
         clipped_fprs.append(max_fpr)
         clipped_pros.append(clipped_pros[-1])
 
-    area = np.trapz(clipped_pros, clipped_fprs) / max_fpr
+    _trapz = getattr(np, "trapezoid", getattr(np, "trapz", None))
+    area = _trapz(clipped_pros, clipped_fprs) / max_fpr
     return float(np.clip(area, 0.0, 1.0))
