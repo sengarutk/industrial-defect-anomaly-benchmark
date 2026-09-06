@@ -12,6 +12,8 @@
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage[pagebackref=true,breaklinks=true,letterpaper=true,colorlinks,bookmarks=false]{hyperref}
 
+\input{tables/generated_metrics.tex}
+
 \title{Beyond AUROC: Cost-Calibrated Thresholding and Operational Evaluation of Unsupervised Industrial Anomaly Detectors}
 
 \author{Utkarsh Sengar\\
@@ -23,7 +25,7 @@ Department of Computer Science\\
 \maketitle
 
 \begin{abstract}
-Standard visual anomaly detection benchmarks evaluate algorithms using threshold-independent ranking metrics ($Image\ AUROC$, $AU\text{-}PRO$), implicitly assuming infinite alarm tolerance and symmetric error penalties. In high-throughput industrial manufacturing, inspection viability is bounded by human reviewer capacity ($\le 5\text{ alarms}/1,000\text{ items}$) and asymmetric escape costs ($c_{\text{miss}} \gg c_{\text{false}}$). We introduce an operational evaluation framework incorporating false-alarm budgets and non-IID factory stream dynamics. We propose \textbf{Cost-Calibrated Thresholding (CCT)}, an empirical risk minimization decision rule that optimizes operational operating cutoffs out-of-sample under strict false-alarm constraints. Evaluating across seven MVTec AD categories (63 experimental runs) with two-stage hierarchical bootstrap confidence intervals ($B = 2,000$) and Holm-Bonferroni multiplicity control, CCT reduces cost-weighted error by up to $4.5\times$ relative to standard quantile baselines under $10\times$ escape cost ratios. Furthermore, our GPU-vectorized coreset selection delivers a $274.6\times$ throughput speedup over CPU sequential greedy selection with exact coverage radius parity. Code, score archives, and execution harnesses are publicly available.
+Standard visual anomaly detection benchmarks evaluate algorithms using threshold-independent ranking metrics ($Image\ AUROC$, $AU\text{-}PRO$), implicitly assuming infinite alarm tolerance and symmetric error penalties. In high-throughput industrial manufacturing, inspection viability is bounded by human reviewer capacity ($\le 5\text{ alarms}/1,000\text{ items}$) and asymmetric escape costs ($c_{\text{miss}} \gg c_{\text{false}}$). We introduce an operational evaluation framework incorporating false-alarm budgets and non-IID factory stream dynamics. We propose \textbf{Cost-Calibrated Thresholding (CCT)}, an empirical risk minimization decision rule that optimizes operational operating cutoffs out-of-sample under strict false-alarm constraints. Evaluating across seven MVTec AD categories (63 experimental runs) with two-stage hierarchical bootstrap confidence intervals ($B = 2,000$) and Holm-Bonferroni multiplicity control, CCT reduces cost-weighted error by up to $\CWEReductionMax{}$ relative to standard quantile baselines under $10\times$ escape cost ratios. Furthermore, our GPU-vectorized coreset selection delivers a $\CoresetSpeedupGPU{}$ throughput speedup over CPU sequential greedy selection with exact coverage radius parity. Code, score archives, and execution harnesses are publicly available.
 \end{abstract}
 
 \section{Introduction}
@@ -45,11 +47,6 @@ We stress-test models across 18 controlled physical environmental conditions spa
 \input{tables/robustness_mrd_mpc.tex}
 
 \section{Operational Evaluation \& Cost-Calibrated Thresholding}
-To address deployment constraints, we formulate Cost-Calibrated Thresholding (CCT) as a constrained empirical risk minimization problem under operator alert capacity bounds. Statistical significance is verified using paired Wilcoxon signed-rank tests \cite{wilcoxon1945individual} with Holm-Bonferroni step-down multiplicity correction \cite{holm1979simple}, and uncertainty is quantified via two-stage hierarchical bootstrap resampling \cite{efron1992bootstrap}. Figure~\ref{fig:operational_systems_grid} illustrates operational trade-offs, defect recall under budget bounds, cost curves, and throughput scaling.
-
-\input{tables/operational_results.tex}
-\input{tables/cct_ablation.tex}
-
 \begin{figure*}[t]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
@@ -78,6 +75,11 @@ To address deployment constraints, we formulate Cost-Calibrated Thresholding (CC
 \caption{Operational evaluation, cost-calibrated trade-offs, and systems scaling across 7 MVTec AD categories.}
 \label{fig:operational_systems_grid}
 \end{figure*}
+
+To address deployment constraints, we formulate Cost-Calibrated Thresholding (CCT) as a constrained empirical risk minimization problem under operator alert capacity bounds. Statistical significance is verified using paired Wilcoxon signed-rank tests \cite{wilcoxon1945individual} with Holm-Bonferroni step-down multiplicity correction \cite{holm1979simple}, and uncertainty is quantified via two-stage hierarchical bootstrap resampling \cite{efron1992bootstrap}. Figure~\ref{fig:operational_systems_grid} illustrates operational trade-offs, defect recall under budget bounds, cost curves, and throughput scaling.
+
+\input{tables/operational_results.tex}
+\input{tables/cct_ablation.tex}
 
 \section{Systems-Level Coreset Scalability}
 We benchmark greedy $k$-center coreset reduction \cite{sener2018active,roth2022towards} across patch scales $N \in [1\text{k}, 50\text{k}]$ and dimensions $D \in [64, 256]$. Our GPU-vectorized matrix formulation delivers sustained throughput gains while maintaining identical coverage radius.
