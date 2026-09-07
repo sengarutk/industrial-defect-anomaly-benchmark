@@ -52,7 +52,6 @@ To address deployment constraints, we formulate Cost-Calibrated Thresholding (CC
 \input{tables/operational_results.tex}
 \input{tables/cct_ablation.tex}
 
-\section{Systems-Level Coreset Scalability}
 \begin{figure*}[t]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
@@ -81,6 +80,8 @@ To address deployment constraints, we formulate Cost-Calibrated Thresholding (CC
 \caption{Operational evaluation, cost-calibrated trade-offs, and systems scaling across 7 MVTec AD categories.}
 \label{fig:operational_systems_grid}
 \end{figure*}
+
+\section{Systems-Level Coreset Scalability}
 We benchmark greedy $k$-center coreset reduction \cite{sener2018active,roth2022towards} across patch scales $N \in [1\text{k}, 50\text{k}]$ and dimensions $D \in [64, 256]$. Our GPU-vectorized matrix formulation delivers sustained throughput gains while maintaining identical coverage radius.
 
 \input{tables/coreset_scalability.tex}

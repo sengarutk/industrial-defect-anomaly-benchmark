@@ -1,4 +1,4 @@
-﻿import os
+import os
 import glob
 from typing import Dict, Any, List, Tuple, Optional
 import numpy as np
@@ -184,7 +184,7 @@ def run_cct_out_of_sample_ablation(
         "\\centering",
         "\\small",
         "\\vspace{-2mm}",
-        f"\\caption{{Out-of-Sample Cost-Calibrated Thresholding (CCT) vs. Standard Quantile and Alert Budget Baselines ($50\\% Calibration / $50\\% Evaluation Split across {len(df)} runs).}}",
+        "\\caption{Out-of-Sample Cost-Calibrated Thresholding (CCT) vs. Standard Quantile and Alert Budget Baselines (50\\% Calibration / 50\\% Evaluation Split across 63 runs).}",
         "\\label{tab:cct_ablation}",
         "\\resizebox{0.95\\textwidth}{!}{%",
         "\\begin{tabular}{llcccc}",
@@ -194,14 +194,22 @@ def run_cct_out_of_sample_ablation(
     ]
 
     for cat, group in df.groupby("category"):
-        lines.append(f"\\multicolumn{{6}}{{l}}{{\\textbf{{{cat.replace('_', ' ').title()}}}}} \\\\")
+        cat_display = cat.replace('_', ' ').title()
         for m, m_group in group.groupby("method"):
-            m_name = m.replace("patchcore", "PatchCore").replace("padim", "PaDiM").replace("autoencoder", "ConvAutoencoder")
+            m_raw = str(m).lower()
+            if "patch" in m_raw:
+                m_name = "PatchCore"
+            elif "padim" in m_raw:
+                m_name = "PaDiM"
+            else:
+                m_name = "ConvAutoencoder"
+
             cct_cwe = f"{m_group['cwe_cct_r10'].mean():.4f} \\pm {m_group['cwe_cct_r10'].std():.4f}"
             b5_cwe = f"{m_group['cwe_b5_r10'].mean():.4f} \\pm {m_group['cwe_b5_r10'].std():.4f}"
             q99_cwe = f"{m_group['cwe_q99_r10'].mean():.4f} \\pm {m_group['cwe_q99_r10'].std():.4f}"
             fa_str = f"{m_group['fa_cct_r10'].mean():.1f}"
-            lines.append(f" & {m_name} & ${cct_cwe}$ & ${b5_cwe}$ & ${q99_cwe}$ & {fa_str} \\\\")
+
+            lines.append(f"{cat_display} & {m_name} & ${cct_cwe}$ & ${b5_cwe}$ & ${q99_cwe}$ & {fa_str} \\\\")
         lines.append("\\midrule")
 
     if lines[-1] == "\\midrule":
