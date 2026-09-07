@@ -9,8 +9,19 @@
 \usepackage{multirow}
 \usepackage{microtype}
 \usepackage{subcaption}
+\usepackage{url}
 \usepackage[numbers,sort&compress]{natbib}
-\usepackage[pagebackref=true,breaklinks=true,letterpaper=true,colorlinks,bookmarks=false]{hyperref}
+% Removed deprecated letterpaper=true option to eliminate hyperref warning
+\usepackage[pagebackref=true,breaklinks=true,colorlinks,bookmarks=false]{hyperref}
+
+% Break URLs cleanly across lines to eliminate Underfull \hbox in bibliography
+\def\UrlBreaks{\do\/\do-}
+
+% Float placement tuning to prevent orphan float pages
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.80}
 
 \input{tables/generated_metrics.tex}
 
@@ -49,9 +60,7 @@ We stress-test models across 18 controlled physical environmental conditions spa
 \section{Operational Evaluation \& Cost-Calibrated Thresholding}
 To address deployment constraints, we formulate Cost-Calibrated Thresholding (CCT) as a constrained empirical risk minimization problem under operator alert capacity bounds. Statistical significance is verified using paired Wilcoxon signed-rank tests \cite{wilcoxon1945individual} with Holm-Bonferroni step-down multiplicity correction \cite{holm1979simple}, and uncertainty is quantified via two-stage hierarchical bootstrap resampling \cite{efron1992bootstrap}. Figure~\ref{fig:operational_systems_grid} illustrates operational trade-offs, defect recall under budget bounds, cost curves, and throughput scaling.
 
-\input{tables/operational_results.tex}
-\input{tables/cct_ablation.tex}
-
+% Declare Figure 1 here so it floats to the top of page 3 or 4 instead of page 6
 \begin{figure*}[t]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
@@ -81,6 +90,9 @@ To address deployment constraints, we formulate Cost-Calibrated Thresholding (CC
 \label{fig:operational_systems_grid}
 \end{figure*}
 
+\input{tables/operational_results.tex}
+\input{tables/cct_ablation.tex}
+
 \section{Systems-Level Coreset Scalability}
 We benchmark greedy $k$-center coreset reduction \cite{sener2018active,roth2022towards} across patch scales $N \in [1\text{k}, 50\text{k}]$ and dimensions $D \in [64, 256]$. Our GPU-vectorized matrix formulation delivers sustained throughput gains while maintaining identical coverage radius.
 
@@ -89,7 +101,12 @@ We benchmark greedy $k$-center coreset reduction \cite{sener2018active,roth2022t
 \section{Conclusion}
 Our findings demonstrate that ranking by $AUROC$ frequently diverges from optimal deployment under real operational alert budgets and asymmetric costs. CCT provides an empirical, leakage-free operational decision rule.
 
+% Bibliography with sloppy setting and emergency stretch to prevent underfull hbox
+\begingroup
+\sloppy
+\emergencystretch=2em
 \bibliographystyle{plainnat}
 \bibliography{references}
+\endgroup
 
 \end{document}
