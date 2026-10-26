@@ -24,6 +24,24 @@ def main() -> int:
         tex = f.read()
     tables = sorted(set(re.findall(r"\\input\{tables/([^}]+)\}", tex)))
     figures = sorted(set(re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{figures/([^}]+)\}", tex)))
+    # GPU-only assets are referenced through \optionalinput / \optionalfigure and may be absent.
+    opt_tables = sorted(set(re.findall(r"\\optionalinput\{tables/([^}]+)\}", tex)))
+    opt_figures = sorted(set(re.findall(r"\\optionalfigure(?:\[[^\]]*\])?\{figures/([^}]+)\}", tex)))
+    for rel in opt_tables:
+        name = rel if rel.endswith(".tex") else rel + ".tex"
+        src, dst = os.path.join(args.results_dir, "tables", "latex", name), os.path.join(args.paper_dir, "tables", name)
+        if os.path.exists(src):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+        elif os.path.exists(dst):
+            os.remove(dst)  # never leave a stale optional table behind
+    for rel in opt_figures:
+        src, dst = os.path.join(args.results_dir, "figures", rel), os.path.join(args.paper_dir, "figures", rel)
+        if os.path.exists(src):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+        elif os.path.exists(dst):
+            os.remove(dst)
 
     missing = []
     for rel in tables:

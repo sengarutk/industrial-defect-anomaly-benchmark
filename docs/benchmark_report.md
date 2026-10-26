@@ -1,4 +1,4 @@
-﻿# Comprehensive Benchmark Report: Industrial Visual Anomaly Detection Under Real-World Degradation
+# Comprehensive Benchmark Report: Industrial Visual Anomaly Detection Under Real-World Degradation
 
 ## 1. Executive Summary & Baseline Implementation Scope
 This report presents an empirical evaluation of visual anomaly detection algorithms on the **MVTec Anomaly Detection (MVTec AD)** dataset under clean nominal conditions and realistic industrial distribution shifts. 

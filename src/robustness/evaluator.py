@@ -1,4 +1,4 @@
-﻿from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 import numpy as np
 from torch.utils.data import DataLoader

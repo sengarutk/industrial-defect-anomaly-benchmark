@@ -303,6 +303,29 @@ def main() -> None:
         md(dc), "",
         f"Totals: {dc.train_good.sum()} train, {dc.test_good.sum() + dc.test_defective.sum()} test "
         f"({dc.test_defective.sum()} defective, each with a ground-truth mask).", ""]))
+    # ---------------- README results block ----------------
+    readme = os.path.join(os.path.dirname(os.path.abspath(args.docs_dir)), "README.md")
+    if os.path.exists(readme):
+        opm = op_sum.groupby("method")[["tpr", "test_fa_at_1k", cost_col]].mean()
+        lines = [f"| Method | Image AUROC | AU-PRO | MRD (AUROC) | TPR @ {b:g}/1k target | Realised FA/1k | "
+                 f"Expected cost (r={r:g}) |", "|:--|--:|--:|--:|--:|--:|--:|"]
+        for m in METHODS:
+            lines.append(f"| {METHOD_NAMES[m]} | {auc_mean[m]:.3f} | {pc_mean[m]:.3f} | "
+                         f"{rob_means[rob_means.method == m].mrd_image_auroc.mean():.3f} | {opm.loc[m, 'tpr']:.3f} | "
+                         f"{opm.loc[m, 'test_fa_at_1k']:.1f} | {opm.loc[m, cost_col]:.4f} |")
+        lines += ["", f"Means over {len(cats)} categories × {n_seeds} seeds ({len(runs)} runs). Thresholds come from "
+                  f"held-out train/good images only; realised false-alarm rates are measured on test sets with "
+                  f"{runs.n_test_nominal.min()}–{runs.n_test_nominal.max()} nominal images, i.e. a resolution of "
+                  f"{1000 / runs.n_test_nominal.max():.0f}–{1000 / runs.n_test_nominal.min():.0f} per 1,000. "
+                  f"CCT vs the nominal-only budget rule (expected cost, out of sample): "
+                  + ", ".join(f"{METHOD_NAMES[m]} {rel[m]:+.0f}%" for m in METHODS) + ". Full tables: "
+                  "[docs/benchmark_report.md](docs/benchmark_report.md)."]
+        text = open(readme, encoding="utf-8").read()
+        start, end = "<!-- RESULTS:START -->", "<!-- RESULTS:END -->"
+        if start in text and end in text:
+            head, rest = text.split(start, 1)
+            text = head + start + "\n" + "\n".join(lines) + "\n" + end + rest.split(end, 1)[1]
+            write(readme, text)
     print(f"Wrote LaTeX to {L}, report and data card to {args.docs_dir}/")
 
 

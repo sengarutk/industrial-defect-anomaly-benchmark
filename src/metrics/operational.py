@@ -1,4 +1,4 @@
-﻿"""Operating-point metrics.
+"""Operating-point metrics.
 
 Conventions used everywhere in the repository:
   * A part is flagged when score >= threshold.

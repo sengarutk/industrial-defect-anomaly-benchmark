@@ -1,9 +1,29 @@
-﻿cff-version: 1.2.0
-message: "If you use this benchmark or framework in your research, please cite it as below."
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite it as below."
 authors:
   - family-names: Sengar
     given-names: Utkarsh
-title: "Beyond AUROC: Cost-Calibrated Thresholding and Operational Evaluation of Unsupervised Industrial Anomaly Detectors"
-version: 1.0.0
-date-released: 2026-09-01
+title: "Industrial Defect Anomaly Benchmark: operating-point and cost-calibrated evaluation of unsupervised detectors on MVTec AD"
+version: 2.0.0
+date-released: 2026-10-26
 url: "https://github.com/sengarutk/industrial-defect-anomaly-benchmark"
+license: MIT
+references:
+  - type: article
+    authors:
+      - family-names: Bergmann
+        given-names: Paul
+      - family-names: Batzner
+        given-names: Kilian
+      - family-names: Fauser
+        given-names: Michael
+      - family-names: Sattlegger
+        given-names: David
+      - family-names: Steger
+        given-names: Carsten
+    title: "The MVTec Anomaly Detection Dataset: A Comprehensive Real-World Dataset for Unsupervised Anomaly Detection"
+    journal: "International Journal of Computer Vision"
+    volume: 129
+    start: 1038
+    end: 1059
+    year: 2021

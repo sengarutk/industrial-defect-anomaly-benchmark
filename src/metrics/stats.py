@@ -1,4 +1,4 @@
-﻿from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 from scipy import stats
@@ -69,7 +69,7 @@ def hierarchical_bootstrap_ci(records: Sequence[Dict[str, Any]], metric_fn: Call
 def paired_wilcoxon(a: np.ndarray, b: np.ndarray) -> Dict[str, float]:
     """Two-sided Wilcoxon signed-rank test on paired values (one pair per independent unit).
 
-    Uses the exact null distribution when there are no ties/zeros (scipy default for small n).
+    Zero differences are discarded; the exact null distribution is used unless |differences| tie.
     Also reports the Hodges-Lehmann estimate and the matched-pairs rank-biserial correlation.
     """
     a = np.asarray(a, dtype=np.float64)
@@ -83,7 +83,10 @@ def paired_wilcoxon(a: np.ndarray, b: np.ndarray) -> Dict[str, float]:
     if nz.size == 0:
         out.update(statistic=float("nan"), p_value=1.0, rank_biserial=0.0, min_attainable_p=1.0)
         return out
-    res = stats.wilcoxon(a, b, alternative="two-sided")
+    # Zeros are dropped (Wilcoxon's original rule) and the exact null distribution is used on the
+    # remaining differences unless their absolute values contain ties.
+    exact = len(np.unique(np.abs(nz))) == nz.size
+    res = stats.wilcoxon(nz, alternative="two-sided", method="exact" if exact else "approx")
     ranks = stats.rankdata(np.abs(nz))
     w_plus, w_minus = ranks[nz > 0].sum(), ranks[nz < 0].sum()
     out.update(statistic=float(res.statistic), p_value=float(res.pvalue),

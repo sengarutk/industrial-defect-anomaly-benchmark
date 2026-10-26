@@ -1,4 +1,4 @@
-﻿"""Fits every (category, method, seed) and evaluates clean and corrupted test sets.
+"""Fits every (category, method, seed) and evaluates clean and corrupted test sets.
 
 Latency is measured separately by scripts/profile_latency.py.
 

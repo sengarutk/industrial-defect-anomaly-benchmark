@@ -1,4 +1,4 @@
-﻿"""Operating-point evaluation with thresholds that never see the test set.
+"""Operating-point evaluation with thresholds that never see the test set.
 
 For each run archive, alarm-budget thresholds are computed from the scores of
 the held-out train/good calibration images only, then applied to the full test

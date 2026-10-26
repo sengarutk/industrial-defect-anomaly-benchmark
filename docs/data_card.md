@@ -1,4 +1,4 @@
-﻿# Dataset Data Card: MVTec Anomaly Detection (7 Categories)
+# Dataset Data Card: MVTec Anomaly Detection (7 Categories)
 
 - **Benchmark Dataset:** MVTec Anomaly Detection (Bergmann et al., CVPR 2019 / IJCV 2021)
 - **Hugging Face Mirror:** `foersben/mvtec-ad`

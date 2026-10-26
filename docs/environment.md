@@ -1,9 +1,12 @@
-﻿# Deployment & Benchmarking Hardware Environment
+# Environment
 
-- **OS / Platform:** Linux x86_64 (WSL2 Ubuntu 22.04 LTS)
-- **Python Version:** 3.8.20
-- **PyTorch / Torchvision:** PyTorch 2.4.1+cu121, Torchvision 0.19.1+cu121
-- **CUDA / cuDNN Version:** CUDA 12.1, cuDNN 8.9.2
-- **GPU Architecture:** NVIDIA GeForce RTX 4050 Laptop GPU (6,141 MB VRAM)
-- **Driver Version:** 550.120
-- **Testing Quality Suite:** Pytest 8.3.5 (64/64 passing tests, 86% line coverage)
+Captured 2026-10-26 22:25 UTC by `scripts/collect_environment.py`.
+
+* Platform: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.17
+* CPU: x86_64 (16 logical cores)
+* Python: 3.8.20 (/home/sengar/miniconda3/envs/vmunet/bin/python)
+* torch 1.13.0+cu117, torchvision 0.14.0+cu117, numpy 1.24.4, scipy 1.10.1, scikit-learn 1.3.2, pandas 2.0.3, opencv 5.0.0, matplotlib 3.7.5
+* CUDA available: False
+* Repository commit: ef83085
+
+Note: during the October 2026 rerun, GPU access was blocked by the host OS inside WSL (NVML: "GPU access blocked by the operating system"), so the accuracy and robustness sweep ran on CPU. Each run record in results/mvtec_ad/runs/ stores the device it used. Latency (scripts/profile_latency.py) and the coreset systems benchmark (scripts/run_coreset_benchmark.py) require CUDA and are reported only when measured on a GPU.

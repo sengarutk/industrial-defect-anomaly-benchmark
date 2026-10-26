@@ -1,4 +1,4 @@
-﻿"""Production-stream projections built by resampling measured scores.
+"""Production-stream projections built by resampling measured scores.
 
 These streams contain no information beyond the measured score pools: each
 part's score is drawn with replacement from the nominal or defect test scores.

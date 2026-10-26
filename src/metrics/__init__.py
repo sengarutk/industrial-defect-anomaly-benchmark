@@ -1,4 +1,4 @@
-﻿from .cct import empirical_cost_curve, optimize_cct_threshold
+from .cct import empirical_cost_curve, optimize_cct_threshold
 from .image_metrics import compute_image_ap, compute_image_auroc, compute_oracle_f1
 from .operational import (alert_budget_threshold, clopper_pearson, compute_expected_cost, compute_fa_at_1k,
                           compute_md_at_1k, compute_operator_overload, expected_cost, false_negative_rate,

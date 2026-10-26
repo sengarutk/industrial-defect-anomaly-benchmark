@@ -1,4 +1,4 @@
-﻿"""Downloads MVTec AD categories from the Hugging Face mirror and verifies them.
+"""Downloads MVTec AD categories from the Hugging Face mirror and verifies them.
 
 Each category is checked against the official manifest in src/mvtec.py after
 download; a category that does not match exactly is reported as an error.

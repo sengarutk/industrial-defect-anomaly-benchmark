@@ -1,4 +1,4 @@
-﻿"""Paper figures. Every function takes measured data; none has a synthetic fallback.
+"""Paper figures. Every function takes measured data; none has a synthetic fallback.
 
 Colour roles (validated with the dataviz palette checker, light mode, all pairs):
 methods use categorical slots 1-3; threshold strategies use neutral + violet/magenta.
@@ -64,10 +64,10 @@ def plot_tpr_vs_budget(curves: Dict[str, pd.DataFrame], path: str) -> str:
                 label=METHOD_LABEL[m])
         ax.fill_between(c["budget"], c["tpr_min"], c["tpr_max"], color=METHOD_COLOR[m], alpha=0.12, lw=0)
     ax.set_xscale("log")
-    ax.set_xlabel("Target alarm budget (false alarms per 1,000 nominal parts)")
+    ax.set_xlabel("Target budget (false alarms / 1k nominal)")
     ax.set_ylabel("Test defect recall (TPR)")
     ax.set_ylim(0, 1.02)
-    ax.legend(loc="lower right", frameon=False)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.22), ncol=3, frameon=False, fontsize=7)
     return _save(fig, path)
 
 
@@ -82,13 +82,15 @@ def plot_realized_vs_target(curves: Dict[str, pd.DataFrame], path: str) -> str:
         c = curves[m]
         ax.plot(c["budget"], c["fa_mean"], color=METHOD_COLOR[m], marker=METHOD_MARKER[m], markevery=3,
                 label=METHOD_LABEL[m])
+        c = c[c["fa_mean"] > 0]
         lo = c["budget"].min() if lo is None else min(lo, c["budget"].min())
         hi = c["budget"].max() if hi is None else max(hi, c["budget"].max())
     ax.plot([lo, hi], [lo, hi], color=INK_2, ls="--", lw=1.2, label="Realised = target")
     ax.set_xscale("log")
-    ax.set_xlabel("Target alarm budget (per 1,000 nominal parts)")
-    ax.set_ylabel("Realised test false alarms per 1,000")
-    ax.legend(loc="upper left", frameon=False)
+    ax.set_yscale("log")
+    ax.set_xlabel("Target budget (false alarms / 1k nominal)")
+    ax.set_ylabel("Realised test FA / 1k")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.22), ncol=2, frameon=False, fontsize=7)
     return _save(fig, path)
 
 
@@ -108,8 +110,9 @@ def plot_cct_cost(summary: pd.DataFrame, path: str) -> str:
         ax.minorticks_off()
         ax.set_title(METHOD_LABEL[m])
         ax.set_xlabel("Cost ratio $r$")
-    axes[0, 0].set_ylabel("Expected cost per part (held-out half)")
-    axes[0, -1].legend(loc="upper left", frameon=False, fontsize=7)
+    axes[0, 0].set_ylabel("Expected cost per part\n(evaluation half)")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=4, frameon=False, fontsize=7)
     return _save(fig, path)
 
 
@@ -198,5 +201,6 @@ def plot_operator_load(load: pd.DataFrame, path: str, priors: Sequence[float]) -
         ax.set_title(f"{reg} stream")
         ax.set_xlabel("Defect prior")
     axes[0].set_ylabel("P(window alerts > capacity)")
-    axes[0].legend(frameon=False, fontsize=7)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=3, frameon=False, fontsize=7)
     return _save(fig, path)

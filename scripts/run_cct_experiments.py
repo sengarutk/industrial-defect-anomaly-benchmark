@@ -1,4 +1,4 @@
-﻿"""Out-of-sample evaluation of Cost-Calibrated Thresholding (CCT) against a nominal-only budget threshold.
+"""Out-of-sample evaluation of Cost-Calibrated Thresholding (CCT) against a nominal-only budget threshold.
 
 See src/experiments/cct_ablation.py for the protocol. Outputs in <results>/tables/:
   cct_runs.csv             every run x split x cost ratio x strategy (evaluation-half metrics)

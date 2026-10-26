@@ -49,3 +49,10 @@ def test_stratified_resampling_keeps_class_counts():
     hierarchical_bootstrap_ci(rec, lambda r: seen.append(int((r[0]["labels"] == 0).sum())) or 0.0,
                               ["scores", "labels"], n_resamples=200, seed=0, strata_key="labels")
     assert set(seen) == {2}
+
+
+def test_wilcoxon_with_zero_difference_uses_exact_distribution():
+    a = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+    b = np.array([1.0, 2.5, 3.6, 4.7, 5.8])  # one zero, four negative differences
+    res = paired_wilcoxon(a, b)
+    assert res["n_nonzero"] == 4 and res["p_value"] == pytest.approx(0.125)

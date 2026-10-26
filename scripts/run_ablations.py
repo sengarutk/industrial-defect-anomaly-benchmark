@@ -1,4 +1,4 @@
-﻿"""Image-score aggregation ablation computed from the stored pixel maps of every run.
+"""Image-score aggregation ablation computed from the stored pixel maps of every run.
 
 Output: <results>/tables/aggregation_ablation.csv (per run x rule) and aggregation_summary.csv
 (per method x rule, mean and std over categories and seeds).
