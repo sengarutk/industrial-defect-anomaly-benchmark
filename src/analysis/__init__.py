@@ -1,3 +1,3 @@
-from .failure_catalog import FailureMiner
+from .failure_catalog import mine_failures, top_region_iou
 
-__all__ = ["FailureMiner"]
+__all__ = ["mine_failures", "top_region_iou"]

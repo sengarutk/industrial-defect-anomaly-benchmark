@@ -36,8 +36,7 @@ robustness:
   corruptions: ["gaussian_blur", "motion_blur", "brightness_drop", "gaussian_noise", "jpeg_compression", "downscale_restore"]
   severities: [1, 2, 3]
 
-profiling:
-  enabled: true
+profiling:  # used by scripts/profile_latency.py
   warmup_runs: 50
   active_runs: 300
   e2e_runs: 100

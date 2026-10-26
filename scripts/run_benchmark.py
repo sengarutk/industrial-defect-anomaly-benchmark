@@ -1,4 +1,6 @@
-﻿"""Fits every (category, method, seed), evaluates clean and corrupted test sets, profiles latency.
+﻿"""Fits every (category, method, seed) and evaluates clean and corrupted test sets.
+
+Latency is measured separately by scripts/profile_latency.py.
 
 Outputs (under output.results_dir from configs/benchmark.yaml):
   scores/<cat>_<method>_<seed>.npz   image-level test scores, labels, defect types, paths, and the
@@ -26,7 +28,6 @@ from torch.utils.data import DataLoader
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.benchmarking import LatencyProfiler  # noqa: E402
 from src.methods import build_model  # noqa: E402
 from src.mvtec import ImageListDataset, list_train_images, split_train_calibration  # noqa: E402
 from src.robustness import CachedTestSet, CorruptedTestDataset, evaluate_maps, predict_dataset, run_stress_test  # noqa: E402
@@ -72,7 +73,6 @@ def main() -> None:
     parser.add_argument("--results-dir")
     parser.add_argument("--force", action="store_true", help="Re-run keys that already have a record")
     parser.add_argument("--no-robustness", action="store_true")
-    parser.add_argument("--no-profiling", action="store_true")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -83,15 +83,12 @@ def main() -> None:
     seeds = args.seeds or cfg["seeds"]
     results_dir = args.results_dir or cfg["output"]["results_dir"]
     do_rob = cfg["robustness"]["enabled"] and not args.no_robustness
-    do_prof = cfg["profiling"]["enabled"] and not args.no_profiling
     batch_size = cfg["training"]["batch_size"]
     device = "cuda" if torch.cuda.is_available() else "cpu"
     commit = git_commit()
 
     for sub in ("scores", "maps", "runs", "robustness"):
         ensure_dir(os.path.join(results_dir, sub))
-    prof = LatencyProfiler(cfg["profiling"]["warmup_runs"], cfg["profiling"]["active_runs"],
-                           cfg["profiling"]["e2e_runs"])
 
     print(f"device={device} categories={categories} methods={methods} seeds={seeds} commit={commit}")
     for cat in categories:
@@ -143,11 +140,6 @@ def main() -> None:
                     record.update({k: rob[k] for k in ("mrd_image_auroc", "mrd_aupro", "mpc_image_auroc", "mpc_aupro")})
                     pd.DataFrame([{"category": cat, "method": method, "seed": seed, **r} for r in rob["conditions"]]) \
                         .to_csv(os.path.join(results_dir, "robustness", f"{key}.csv"), index=False)
-
-                if do_prof:
-                    sample = clean_ds[0][0].unsqueeze(0)
-                    record.update(prof.profile_model(model, sample, device))
-                    record.update(prof.profile_e2e(model, list(cache.paths), device, img_size))
 
                 record = {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in record.items()}
                 with open(record_path, "w", encoding="utf-8") as fh:

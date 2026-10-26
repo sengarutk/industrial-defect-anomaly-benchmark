@@ -1,4 +1,4 @@
-﻿from typing import Any, Callable, Dict, List, Sequence
+﻿from typing import Any, Callable, Dict, List, Optional, Sequence
 
 import numpy as np
 from scipy import stats
@@ -33,11 +33,13 @@ def validate_bootstrap_ci_coverage(n_simulations: int = 500, sample_size: int = 
 
 def hierarchical_bootstrap_ci(records: Sequence[Dict[str, Any]], metric_fn: Callable[[List[Dict[str, Any]]], float],
                               item_keys: Sequence[str], n_resamples: int = 2000, ci: float = 0.95,
-                              seed: int = 0) -> Dict[str, float]:
+                              seed: int = 0, strata_key: Optional[str] = None) -> Dict[str, float]:
     """Two-stage bootstrap: resample runs (seeds) with replacement, then items within each run.
 
     `item_keys` names the per-item arrays in each record that are resampled
-    jointly (same indices). Other entries are passed through unchanged.
+    jointly (same indices). If `strata_key` is given (e.g. "labels"), items are
+    resampled within each stratum so class counts stay fixed and per-class
+    rates are always defined. Other entries are passed through unchanged.
     """
     if len(records) == 0:
         return {"estimate": float("nan"), "ci_low": float("nan"), "ci_high": float("nan"), "std_error": float("nan")}
@@ -48,8 +50,13 @@ def hierarchical_bootstrap_ci(records: Sequence[Dict[str, Any]], metric_fn: Call
         sample = []
         for r in rng.randint(0, len(records), size=len(records)):
             rec = dict(records[r])
-            n = len(rec[item_keys[0]])
-            idx = rng.randint(0, n, size=n)
+            if strata_key is None:
+                n = len(rec[item_keys[0]])
+                idx = rng.randint(0, n, size=n)
+            else:
+                strata = np.asarray(rec[strata_key])
+                idx = np.concatenate([rng.choice(np.flatnonzero(strata == v), size=int(np.sum(strata == v)))
+                                      for v in np.unique(strata)])
             for k in item_keys:
                 rec[k] = np.asarray(rec[k])[idx]
             sample.append(rec)
