@@ -1,0 +1,24 @@
+# Operational evaluation settings (read by run_operational_eval.py,
+# run_cct_experiments.py and generate_report.py).
+deployment_prior: 0.01          # defect rate assumed in production for expected cost
+priors: [0.01, 0.05, 0.15]       # priors used for operator-load projections
+cost_ratios: [5.0, 10.0, 20.0, 50.0]
+primary_cost_ratio: 10.0
+alert_budgets_per_1k: [5.0, 10.0, 50.0]
+primary_alert_budget_per_1k: 5.0
+
+cct:
+  n_splits: 20                   # repeated stratified 50/50 splits of the test set per run
+  split_seed: 0
+
+streams:
+  n_items: 10000
+  operator_capacity_per_window: 60
+  window_size: 1000
+  burst_mean_block_length: 20
+  drift_slope_sigma: 0.10
+
+statistics:
+  bootstrap_resamples: 2000
+  ci: 0.95
+  alpha: 0.05

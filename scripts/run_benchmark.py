@@ -1,202 +1,164 @@
-﻿import argparse
+﻿"""Fits every (category, method, seed), evaluates clean and corrupted test sets, profiles latency.
+
+Outputs (under output.results_dir from configs/benchmark.yaml):
+  scores/<cat>_<method>_<seed>.npz   image-level test scores, labels, defect types, paths, and the
+                                     scores of the held-out nominal calibration images (tracked in git)
+  maps/<cat>_<method>_<seed>.npz     float16 pixel maps + uint8 masks (large; not tracked in git)
+  runs/<cat>_<method>_<seed>.json    one record per run (metrics, robustness summary, latency, provenance)
+  robustness/<cat>_<method>_<seed>.csv   per-condition robustness metrics
+  tables/runs_master.csv, tables/robustness_conditions.csv   rebuilt from the per-run files at the end
+
+Runs whose JSON record already exists are skipped unless --force is given, so an
+interrupted sweep can be resumed without duplicating rows.
+"""
+import argparse
+import json
 import os
+import subprocess
 import sys
 import time
-from typing import List
+from datetime import datetime, timezone
+
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-# Ensure repository root is in sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.utils import seed_everything
-from src.mvtec import MVTecTrainNormal
-from src.methods.patchcore import PatchCore
-from src.methods.padim import PaDiM
-from src.methods.autoencoder import ConvAutoencoder
-from src.robustness.dataset import CorruptedMVTecTest
-from src.robustness.evaluator import RobustnessEvaluator
-from src.benchmarking.profiler import CUDAPerformanceProfiler
+from src.benchmarking import LatencyProfiler  # noqa: E402
+from src.methods import build_model  # noqa: E402
+from src.mvtec import ImageListDataset, list_train_images, split_train_calibration  # noqa: E402
+from src.robustness import CachedTestSet, CorruptedTestDataset, evaluate_maps, predict_dataset, run_stress_test  # noqa: E402
+from src.utils import ensure_dir, load_config, seed_everything  # noqa: E402
 
 
-def get_model(method_name: str, device: str):
-    method = method_name.lower()
-    if method == "patchcore":
-        return PatchCore(device=device)
-    elif method == "padim":
-        return PaDiM(device=device)
-    elif method == "autoencoder":
-        return ConvAutoencoder(device=device, epochs=20)
-    else:
-        raise ValueError(f"Unknown method: {method_name}")
+def git_commit() -> str:
+    try:
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True,
+                                       stderr=subprocess.DEVNULL).strip()
+    except Exception:
+        return "unknown"
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Master Multi-Seed Benchmark Runner")
-    parser.add_argument("--categories", nargs="+", default=["bottle", "cable", "hazelnut", "metal_nut", "carpet"])
-    parser.add_argument("--methods", nargs="+", default=["patchcore", "padim", "autoencoder"])
-    parser.add_argument("--seeds", nargs="+", type=int, default=[42, 123, 2026])
-    parser.add_argument("--data-root", type=str, default="data/mvtec_ad")
-    parser.add_argument("--output-dir", type=str, default=None)
-    parser.add_argument("--run-robustness", action="store_true", default=True)
-    parser.add_argument("--no-run-robustness", dest="run_robustness", action="store_false")
-    parser.add_argument("--run-profiling", action="store_true", default=True)
-    parser.add_argument("--no-run-profiling", dest="run_profiling", action="store_false")
-    parser.add_argument("--save-scores", action="store_true", default=True, help="Persist .npz score archives")
-    parser.add_argument("--no-save-scores", dest="save_scores", action="store_false")
-    parser.add_argument("--scores-dir", type=str, default=None)
-    parser.add_argument("--batch-size", type=int, default=4)
+def rebuild_tables(results_dir: str) -> None:
+    runs_dir = os.path.join(results_dir, "runs")
+    records = []
+    for f in sorted(os.listdir(runs_dir)):
+        if f.endswith(".json"):
+            with open(os.path.join(runs_dir, f), encoding="utf-8") as fh:
+                records.append(json.load(fh))
+    tables = os.path.join(results_dir, "tables")
+    ensure_dir(tables)
+    df = pd.DataFrame(records).sort_values(["category", "method", "seed"]).reset_index(drop=True)
+    if df.duplicated(["category", "method", "seed"]).any():
+        raise RuntimeError("Duplicate run keys found in runs/; refusing to build runs_master.csv")
+    df.to_csv(os.path.join(tables, "runs_master.csv"), index=False)
+
+    rob_dir = os.path.join(results_dir, "robustness")
+    if os.path.isdir(rob_dir):
+        parts = [pd.read_csv(os.path.join(rob_dir, f)) for f in sorted(os.listdir(rob_dir)) if f.endswith(".csv")]
+        if parts:
+            pd.concat(parts).to_csv(os.path.join(tables, "robustness_conditions.csv"), index=False)
+    print(f"Rebuilt tables from {len(df)} run records in {tables}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Multi-seed MVTec AD benchmark")
+    parser.add_argument("--config", default="configs/benchmark.yaml")
+    parser.add_argument("--categories", nargs="+")
+    parser.add_argument("--methods", nargs="+")
+    parser.add_argument("--seeds", nargs="+", type=int)
+    parser.add_argument("--results-dir")
+    parser.add_argument("--force", action="store_true", help="Re-run keys that already have a record")
+    parser.add_argument("--no-robustness", action="store_true")
+    parser.add_argument("--no-profiling", action="store_true")
     args = parser.parse_args()
 
-    # Determine default output directory based on dataset root
-    if args.output_dir is None:
-        if "synthetic" in args.data_root.lower() or "mock" in args.data_root.lower():
-            args.output_dir = "results/synthetic_validation"
-        else:
-            args.output_dir = "results/mvtec_ad"
-
+    cfg = load_config(args.config)
+    data_root = cfg["dataset"]["root"]
+    img_size = cfg["dataset"]["img_size"]
+    categories = args.categories or cfg["dataset"]["categories"]
+    methods = args.methods or list(cfg["methods"].keys())
+    seeds = args.seeds or cfg["seeds"]
+    results_dir = args.results_dir or cfg["output"]["results_dir"]
+    do_rob = cfg["robustness"]["enabled"] and not args.no_robustness
+    do_prof = cfg["profiling"]["enabled"] and not args.no_profiling
+    batch_size = cfg["training"]["batch_size"]
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    tables_dir = os.path.join(args.output_dir, "tables")
-    figures_dir = os.path.join(args.output_dir, "figures")
-    scores_dir = args.scores_dir if args.scores_dir is not None else os.path.join(args.output_dir, "scores")
+    commit = git_commit()
 
-    os.makedirs(tables_dir, exist_ok=True)
-    os.makedirs(figures_dir, exist_ok=True)
-    if args.save_scores:
-        os.makedirs(scores_dir, exist_ok=True)
+    for sub in ("scores", "maps", "runs", "robustness"):
+        ensure_dir(os.path.join(results_dir, sub))
+    prof = LatencyProfiler(cfg["profiling"]["warmup_runs"], cfg["profiling"]["active_runs"],
+                           cfg["profiling"]["e2e_runs"])
 
-    master_csv_path = os.path.join(tables_dir, "runs_master.csv")
-    profiler = CUDAPerformanceProfiler(warmup_runs=50, active_runs=300, device=device)
-
-    rows = []
-    print(f"=== Starting Benchmark on Device: {device} ===")
-    print(f"Output Directory: {args.output_dir}")
-    print(f"Scores Directory: {scores_dir}")
-    print(f"Categories: {args.categories}")
-    print(f"Methods: {args.methods}")
-    print(f"Seeds: {args.seeds}\n")
-
-    for seed in args.seeds:
-        for cat in args.categories:
-            for method_name in args.methods:
-                print(f"--> Running [Seed: {seed}] [Cat: {cat}] [Method: {method_name}]")
+    print(f"device={device} categories={categories} methods={methods} seeds={seeds} commit={commit}")
+    for cat in categories:
+        cache = None
+        train_paths = list_train_images(data_root, cat)
+        for seed in seeds:
+            fit_paths, calib_paths = split_train_calibration(train_paths, cfg["dataset"]["calib_fraction"], seed)
+            for method in methods:
+                key = f"{cat}_{method}_{seed}"
+                record_path = os.path.join(results_dir, "runs", f"{key}.json")
+                if os.path.exists(record_path) and not args.force:
+                    print(f"[skip] {key} (record exists)")
+                    continue
+                if cache is None:
+                    cache = CachedTestSet(data_root, cat, img_size)
+                print(f"[run] {key}: fit={len(fit_paths)} calib={len(calib_paths)} test={len(cache)}", flush=True)
                 seed_everything(seed)
+                model = build_model(method, dict(cfg["methods"][method]), seed=seed, device=device)
+                fit_loader = DataLoader(ImageListDataset(fit_paths, img_size), batch_size=batch_size, shuffle=False)
+                t0 = time.perf_counter()
+                model.fit(fit_loader)
+                if device == "cuda":
+                    torch.cuda.synchronize()
+                fit_time = time.perf_counter() - t0
 
-                # 1. Fit Model
-                train_ds = MVTecTrainNormal(args.data_root, cat)
-                train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True)
+                calib_scores, _ = predict_dataset(model, ImageListDataset(calib_paths, img_size), batch_size)
+                clean_ds = CorruptedTestDataset(cache, None, 0, noise_seed=seed)
+                scores, maps = predict_dataset(model, clean_ds, batch_size)
+                clean = evaluate_maps(cache.labels, scores, cache.masks, maps)
 
-                t0 = time.time()
-                model = get_model(method_name, device)
-                model.fit(train_loader)
-                fit_time_s = time.time() - t0
+                rel_paths = np.array([os.path.relpath(p, data_root) for p in cache.paths])
+                np.savez_compressed(os.path.join(results_dir, "scores", f"{key}.npz"),
+                                    image_scores=scores, image_labels=cache.labels, defect_types=cache.defect_types,
+                                    image_paths=rel_paths, calib_scores=calib_scores,
+                                    calib_paths=np.array([os.path.relpath(p, data_root) for p in calib_paths]))
+                np.savez_compressed(os.path.join(results_dir, "maps", f"{key}.npz"),
+                                    pixel_amaps=maps.astype(np.float16), ground_truth_masks=cache.masks)
 
-                # 2. Dual-Latency Hardware Profiling (T_model & T_e2e)
-                prof_results = {}
-                if args.run_profiling:
-                    prof_results = profiler.profile_dual(model, input_shape=(1, 3, 256, 256))
+                record = {"category": cat, "method": method, "seed": seed, "device": device,
+                          "commit": commit, "timestamp": datetime.now(timezone.utc).isoformat(),
+                          "n_fit": len(fit_paths), "n_calib": len(calib_paths), "n_test": len(cache),
+                          "n_test_nominal": int((cache.labels == 0).sum()),
+                          "n_test_defect": int((cache.labels == 1).sum()),
+                          "fit_time_s": fit_time, **clean}
 
-                # 3. Clean Evaluation & Score Extraction
-                evaluator = RobustnessEvaluator(model, args.data_root, cat, device=device)
-                test_ds = CorruptedMVTecTest(args.data_root, cat, corruption_type=None)
-                test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False)
-                
-                clean_image_labels, clean_image_scores, clean_gt_masks, clean_pixel_amaps = evaluator.predict_split(test_loader)
-                clean_metrics = evaluator.evaluate_predictions(clean_image_labels, clean_image_scores, clean_gt_masks, clean_pixel_amaps)
+                if do_rob:
+                    rob = run_stress_test(model, cache, clean, cfg["robustness"]["corruptions"],
+                                          cfg["robustness"]["severities"], batch_size, noise_seed=seed)
+                    record.update({k: rob[k] for k in ("mrd_image_auroc", "mrd_aupro", "mpc_image_auroc", "mpc_aupro")})
+                    pd.DataFrame([{"category": cat, "method": method, "seed": seed, **r} for r in rob["conditions"]]) \
+                        .to_csv(os.path.join(results_dir, "robustness", f"{key}.csv"), index=False)
 
-                # Persist score archive if enabled
-                if args.save_scores:
-                    score_file = os.path.join(scores_dir, f"{cat}_{method_name}_{seed}.npz")
-                    np.savez_compressed(
-                        score_file,
-                        image_scores=clean_image_scores,
-                        image_labels=clean_image_labels,
-                        pixel_amaps=clean_pixel_amaps.astype(np.float32),
-                        ground_truth_masks=clean_gt_masks.astype(np.float32)
-                    )
+                if do_prof:
+                    sample = clean_ds[0][0].unsqueeze(0)
+                    record.update(prof.profile_model(model, sample, device))
+                    record.update(prof.profile_e2e(model, list(cache.paths), device, img_size))
 
-                # 4. Robustness Stress-Test
-                mrd_auroc, mrd_aupro = 0.0, 0.0
-                signed_drop_auroc, signed_drop_aupro = 0.0, 0.0
-                if args.run_robustness:
-                    stress_res = evaluator.run_full_stress_test(batch_size=args.batch_size)
-                    mrd_auroc = stress_res["mrd_image_auroc"]
-                    mrd_aupro = stress_res["mrd_aupro"]
-                    signed_drop_auroc = stress_res.get("mean_performance_change_auroc", mrd_auroc)
-                    signed_drop_aupro = stress_res.get("mean_performance_change_aupro", mrd_aupro)
+                record = {k: (None if isinstance(v, float) and np.isnan(v) else v) for k, v in record.items()}
+                with open(record_path, "w", encoding="utf-8") as fh:
+                    json.dump(record, fh, indent=2)
+                print(f"      AUROC={clean['image_auroc']:.4f} AU-PRO={clean['aupro']:.4f} "
+                      f"MRD={record.get('mrd_image_auroc', float('nan')):.4f} fit={fit_time:.1f}s", flush=True)
+                del model
+                if device == "cuda":
+                    torch.cuda.empty_cache()
 
-                row = {
-                    "timestamp": pd.Timestamp.utcnow().isoformat(),
-                    "seed": seed,
-                    "category": cat,
-                    "method": method_name,
-                    "device": device,
-                    "fit_time_s": fit_time_s,
-                    "image_auroc": clean_metrics["image_auroc"],
-                    "image_ap": clean_metrics["image_ap"],
-                    "pixel_auroc": clean_metrics["pixel_auroc"],
-                    "pixel_ap": clean_metrics["pixel_ap"],
-                    "aupro": clean_metrics["aupro"],
-                    "max_f1": clean_metrics["max_f1"],
-                    "optimal_threshold": clean_metrics.get("optimal_threshold", 0.0),
-                    "oracle_max_f1": clean_metrics["oracle_max_f1"],
-                    "oracle_threshold": clean_metrics["oracle_threshold"],
-                    "precision_at_optimal": clean_metrics.get("precision_at_optimal", 0.0),
-                    "recall_at_optimal": clean_metrics.get("recall_at_optimal", 0.0),
-                    "ece": clean_metrics["ece"],
-                    "mrd_image_auroc": mrd_auroc,
-                    "mrd_aupro": mrd_aupro,
-                    "mean_performance_change_auroc": signed_drop_auroc,
-                    "mean_performance_change_aupro": signed_drop_aupro,
-                    "mCE_image_auroc": signed_drop_auroc,
-                    "mCE_aupro": signed_drop_aupro,
-                    "p50_model_ms": prof_results.get("p50_model_ms", 0.0),
-                    "p95_model_ms": prof_results.get("p95_model_ms", 0.0),
-                    "fps_model": prof_results.get("fps_model", 0.0),
-                    "p50_e2e_ms": prof_results.get("p50_e2e_ms", 0.0),
-                    "p95_e2e_ms": prof_results.get("p95_e2e_ms", 0.0),
-                    "fps_e2e": prof_results.get("fps_e2e", 0.0),
-                    "p50_latency_ms": prof_results.get("p50_model_ms", 0.0),
-                    "fps": prof_results.get("fps_model", 0.0),
-                    "peak_vram_mb": prof_results.get("peak_vram_mb", 0.0),
-                }
-                rows.append(row)
-                df_row = pd.DataFrame([row])
-                write_header = not os.path.exists(master_csv_path)
-                df_row.to_csv(master_csv_path, mode="a", header=write_header, index=False)
-                print(f"    Done: Image AUROC = {row['image_auroc']:.4f} | AU-PRO = {row['aupro']:.4f} | MRD = {row['mrd_image_auroc']:.4f}")
-
-    # Multi-seed aggregate summary table
-    df_all = pd.DataFrame(rows)
-    group_cols = ["category", "method"]
-    summary_df = df_all.groupby(group_cols).agg(
-        image_auroc_mean=("image_auroc", "mean"),
-        image_auroc_std=("image_auroc", "std"),
-        aupro_mean=("aupro", "mean"),
-        aupro_std=("aupro", "std"),
-        pixel_auroc_mean=("pixel_auroc", "mean"),
-        pixel_auroc_std=("pixel_auroc", "std"),
-        mrd_mean=("mrd_image_auroc", "mean"),
-        mrd_std=("mrd_image_auroc", "std"),
-        p50_model_ms=("p50_model_ms", "mean"),
-        p50_e2e_ms=("p50_e2e_ms", "mean"),
-        fps_model=("fps_model", "mean"),
-        fps_e2e=("fps_e2e", "mean"),
-        peak_vram_mb=("peak_vram_mb", "mean"),
-    ).reset_index()
-
-    summary_csv = os.path.join(tables_dir, "summary_multiseed.csv")
-    summary_df.to_csv(summary_csv, index=False)
-
-    summary_md = os.path.join(tables_dir, "summary_multiseed.md")
-    with open(summary_md, "w", encoding="utf-8") as f:
-        f.write("# Master Multi-Seed Benchmark Summary (mean ± std)\n\n")
-        f.write(summary_df.to_markdown(index=False))
-        f.write("\n")
-
-    print(f"\n=== Benchmark Complete! Saved summaries to {tables_dir} ===")
+    rebuild_tables(results_dir)
 
 
 if __name__ == "__main__":

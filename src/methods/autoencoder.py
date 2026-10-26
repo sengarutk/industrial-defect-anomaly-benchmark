@@ -1,5 +1,5 @@
-﻿import os
-from typing import Tuple, Optional
+﻿from typing import Optional, Tuple
+
 import numpy as np
 import scipy.ndimage
 import torch
@@ -10,149 +10,72 @@ from .base import BaseAnomalyDetector
 
 
 class _ConvAutoencoderArch(nn.Module):
+    """(3, 256, 256) -> (128, 16, 16) -> (3, 256, 256); four stride-2 stages each way."""
+
     def __init__(self):
         super().__init__()
-        # Encoder: (3, 256, 256) -> (128, 16, 16)
-        self.encoder = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True),
+        def down(cin, cout):
+            return [nn.Conv2d(cin, cout, 4, 2, 1), nn.BatchNorm2d(cout), nn.LeakyReLU(0.2, inplace=True)]
 
-            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
+        def up(cin, cout):
+            return [nn.ConvTranspose2d(cin, cout, 4, 2, 1), nn.BatchNorm2d(cout), nn.LeakyReLU(0.2, inplace=True)]
 
-            nn.Conv2d(128, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
-        )
-
-        # Decoder: (128, 16, 16) -> (3, 256, 256)
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(128, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2, inplace=True),
-
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
-        )
+        self.encoder = nn.Sequential(*down(3, 32), *down(32, 64), *down(64, 128), *down(128, 128))
+        self.decoder = nn.Sequential(*up(128, 128), *up(128, 64), *up(64, 32), nn.ConvTranspose2d(32, 3, 4, 2, 1))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        z = self.encoder(x)
-        out = self.decoder(z)
-        return out
+        return self.decoder(self.encoder(x))
 
 
 class ConvAutoencoder(BaseAnomalyDetector):
+    """Convolutional autoencoder baseline trained with MSE on nominal images.
+
+    Pixel map: channel-mean squared reconstruction error, Gaussian smoothed.
+    Image score: max of the map (same aggregation as PatchCore and PaDiM).
+    Weight initialisation and batch order come from the global torch RNG,
+    which the caller seeds via seed_everything().
     """
-    Convolutional Autoencoder baseline:
-    - Trained to reconstruct nominal (defect-free) factory images
-    - At inference, defective regions fail to reconstruct accurately
-    - Pixel anomaly map = per-pixel Mean Squared Reconstruction Error
-    - Image anomaly score = 95th percentile spatial reconstruction error
-    """
+
     def __init__(
         self,
-        epochs: int = 20,
+        epochs: int = 40,
         lr: float = 1e-3,
         weight_decay: float = 1e-5,
-        device: Optional[str] = None
+        batch_size: int = 16,
+        smoothing_sigma: float = 4.0,
+        device: Optional[str] = None,
     ):
         super().__init__(device=device)
         self.epochs = epochs
         self.lr = lr
         self.weight_decay = weight_decay
-
+        self.batch_size = batch_size
+        self.smoothing_sigma = smoothing_sigma
         self.model = _ConvAutoencoderArch().to(self.device)
-        self.criterion = nn.MSELoss()
 
     def fit(self, dataloader: DataLoader) -> None:
-        """
-        Fits autoencoder weights on normal training images.
-        """
-        all_tensors = []
-        for batch in dataloader:
-            if isinstance(batch, (list, tuple)):
-                x = batch[0]
-            else:
-                x = batch
-            all_tensors.append(x)
-
-        if len(all_tensors) == 0:
-            return
-
-        data = torch.cat(all_tensors, dim=0).to(self.device)
-        n_samples = data.shape[0]
-        batch_size = 16
-
+        data = torch.cat([b[0] if isinstance(b, (list, tuple)) else b for b in dataloader]).to(self.device)
+        n = data.shape[0]
+        opt = torch.optim.AdamW(self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        loss_fn = nn.MSELoss()
         self.model.train()
-        optimizer = torch.optim.AdamW(
-            self.model.parameters(),
-            lr=self.lr,
-            weight_decay=self.weight_decay
-        )
-
-        for epoch in range(self.epochs):
-            perm = torch.randperm(n_samples, device=self.device)
-            for i in range(0, n_samples, batch_size):
-                batch_idx = perm[i:i + batch_size]
-                x_batch = data[batch_idx]
-
-                optimizer.zero_grad()
-                reconstruction = self.model(x_batch)
-                loss = self.criterion(reconstruction, x_batch)
+        for _ in range(self.epochs):
+            perm = torch.randperm(n, device=self.device)
+            for i in range(0, n, self.batch_size):
+                xb = data[perm[i:i + self.batch_size]]
+                if xb.shape[0] < 2:  # BatchNorm needs more than one sample per batch
+                    continue
+                opt.zero_grad()
+                loss = loss_fn(self.model(xb), xb)
                 loss.backward()
-                optimizer.step()
-
+                opt.step()
         self.model.eval()
 
     def predict(self, x: torch.Tensor) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Computes reconstruction residual heatmap and image anomaly scores.
-        Returns:
-            image_scores: np.ndarray of shape [B]
-            anomaly_maps: np.ndarray of shape [B, 256, 256]
-        """
         self.model.eval()
-        B = x.shape[0]
-        x = x.to(self.device)
-
         with torch.no_grad():
-            reconstructed = self.model(x)
-            residual = torch.mean((x - reconstructed) ** 2, dim=1).cpu().numpy()
-
-        smoothed_amaps = np.zeros_like(residual)
-        image_scores = np.zeros(B, dtype=float)
-
-        for b in range(B):
-            smoothed_amaps[b] = scipy.ndimage.gaussian_filter(residual[b], sigma=4)
-            image_scores[b] = float(np.percentile(smoothed_amaps[b], 95))
-
-        return image_scores, smoothed_amaps
-
-    def save(self, path: str) -> None:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        torch.save({
-            "model_state": self.model.state_dict(),
-            "epochs": self.epochs,
-            "lr": self.lr,
-            "weight_decay": self.weight_decay
-        }, path)
-
-    def load(self, path: str) -> None:
-        state = torch.load(path, map_location=self.device)
-        self.model.load_state_dict(state["model_state"])
-        self.epochs = state.get("epochs", 20)
-        self.lr = state.get("lr", 1e-3)
-        self.weight_decay = state.get("weight_decay", 1e-5)
+            x = x.to(self.device)
+            residual = ((x - self.model(x)) ** 2).mean(dim=1).cpu().numpy()
+        smoothed = np.stack([scipy.ndimage.gaussian_filter(r, sigma=self.smoothing_sigma) for r in residual])
+        return smoothed.reshape(len(smoothed), -1).max(axis=1).astype(np.float64), smoothed

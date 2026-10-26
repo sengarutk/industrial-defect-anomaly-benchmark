@@ -1,3 +1,3 @@
-from .profiler import CUDAPerformanceProfiler
+from .profiler import LatencyProfiler
 
-__all__ = ["CUDAPerformanceProfiler"]
+__all__ = ["LatencyProfiler"]
