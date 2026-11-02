@@ -1,0 +1,23 @@
+{
+  "category": "hazelnut",
+  "method": "autoencoder",
+  "seed": 2026,
+  "device": "cuda",
+  "commit": "8d67860",
+  "timestamp": "2026-10-31T00:24:42.779999+00:00",
+  "n_fit": 313,
+  "n_calib": 78,
+  "n_test": 110,
+  "n_test_nominal": 40,
+  "n_test_defect": 70,
+  "fit_time_s": 50.31931088000056,
+  "image_auroc": 0.9846428571428572,
+  "image_ap": 0.9916836433789329,
+  "pixel_auroc": 0.9813106634664785,
+  "pixel_ap": 0.6046230881428609,
+  "aupro": 0.8845004576261042,
+  "mrd_image_auroc": 0.05057539682539682,
+  "mrd_aupro": 0.083209557987873,
+  "mpc_image_auroc": 0.05057539682539682,
+  "mpc_aupro": 0.083209557987873
+}

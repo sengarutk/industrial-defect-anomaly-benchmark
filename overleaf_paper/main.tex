@@ -1,6 +1,8 @@
-\documentclass[10pt,twocolumn,letterpaper]{article}
+\documentclass[11pt,letterpaper]{article}
 
 \usepackage{times}
+\usepackage[margin=1in]{geometry}
+\usepackage{adjustbox}
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
@@ -102,11 +104,12 @@ procedure~\cite{holm1979simple}. With $n$ categories the smallest attainable $p$
 \paragraph{Ranking metrics.} Table~\ref{tab:main_results} reproduces the familiar ordering: PatchCore-style
 (mean image AUROC \MeanAUROCPatchCore, AU-PRO \MeanAUPROPatchCore) ahead of PaDiM-style (\MeanAUROCPaDiM,
 \MeanAUPROPaDiM) and the autoencoder (\MeanAUROCAE, \MeanAUPROAE). Table~\ref{tab:robustness} and
-Fig.~\ref{fig:robustness} show the corruption sensitivity of the feature-based detectors.
+Fig.~\ref{fig:robustness} show that the feature-based detectors lose most under noise, motion blur and downscaling.
+The autoencoder's small degradation reflects its weak clean performance rather than robustness.
 
 \input{tables/robustness}
 
-\begin{figure*}[t]
+\begin{figure}[tbp]
 \centering
 \includegraphics[width=0.32\linewidth]{figures/tpr_vs_alert_budget.png}\hfill
 \includegraphics[width=0.32\linewidth]{figures/realized_vs_target_alarms.png}\hfill
@@ -116,7 +119,7 @@ target budget (macro-average over categories; band: range over categories). Cent
 rate against the target; the dashed line marks equality. Rates below the test-set resolution cannot be
 observed. Right: out-of-sample expected cost of each threshold rule as the cost ratio grows.}
 \label{fig:operating}
-\end{figure*}
+\end{figure}
 
 \paragraph{Operating points.} Table~\ref{tab:operational} and Fig.~\ref{fig:operating} report the operating point
 at a target of \PrimaryBudget{} false alarms per 1,000 nominal parts. Two effects limit what can be claimed.
@@ -133,22 +136,42 @@ validation sets than MVTec AD provides.
 labelled calibration defects changes the expected cost by \CCTCostChangePatchCore, \CCTCostChangePaDiM{} and
 \CCTCostChangeAE{} for the three detectors. Budget violations on the evaluation halves occur for every rule
 (nominal-only: \NominalViolationPatchCore, \NominalViolationPaDiM, \NominalViolationAE; CCT with budget:
-\CCTViolationPatchCore, \CCTViolationPaDiM, \CCTViolationAE). The gap to the in-sample oracle is larger than the
-difference between deployable rules, which says that the main limitation is the amount of calibration data, not
-the choice of rule. With \NumCategories{} categories as units, none of the comparisons can be declared
-significant after Holm adjustment unless all categories agree in sign.
+\CCTViolationPatchCore, \CCTViolationPaDiM, \CCTViolationAE). Every deployable rule stays well above the cost of the
+in-sample oracle, which suggests that the main limitation is the amount of calibration data rather than
+the choice of rule. With \NumCategories{} categories as units, none of the rule comparisons is significant after
+Holm adjustment (Table~\ref{tab:cct}); the same holds for the method comparisons in Table~\ref{tab:significance},
+including PatchCore versus the autoencoder.
 
 \input{tables/cct}
 \input{tables/significance}
 
-\begin{figure}[t]
+\begin{figure}[tbp]
 \centering
-\includegraphics[width=\linewidth]{figures/robustness_heatmap.png}
+\includegraphics[width=0.9\linewidth]{figures/robustness_heatmap.png}
 \caption{Mean drop in image AUROC per corruption and severity (averaged over categories and seeds).}
 \label{fig:robustness}
 \end{figure}
 
+\ifnum\HasLatency=1
+\paragraph{Latency.} Table~\ref{tab:latency} reports batch-1 latency on the GPU used for the systems measurements.
+End-to-end time, which includes decoding and resizing the full-resolution PNG, is several times the model time for
+all three detectors, so image I/O rather than the model dominates throughput at batch size 1.
+\fi
 \optionalinput{tables/latency}
+
+\ifnum\HasCoreset=1
+\paragraph{Coreset selection.} PatchCore's memory bank is selected with exact greedy k-center. Running the same
+greedy rule on the GPU is \CoresetSpeedup{} faster than a vectorised NumPy implementation at $N=\CoresetN$ patches
+(Table~\ref{tab:coreset}, Fig.~\ref{fig:coreset}) and reaches the same coverage radius; the selected indices can
+diverge after float32 rounding breaks a near-tie differently (\CoresetAgreement{} identical at that size). Adding the
+50 farthest points per step is much faster but gives a larger coverage radius, most visibly for small $N$.
+\begin{figure}[tbp]
+\centering
+\optionalfigure[width=0.9\linewidth]{figures/coreset_scalability.png}
+\caption{Greedy k-center selection time and coverage radius relative to exact greedy ($D=128$, $M=0.1N$).}
+\label{fig:coreset}
+\end{figure}
+\fi
 \optionalinput{tables/coreset}
 
 \section{Limitations}

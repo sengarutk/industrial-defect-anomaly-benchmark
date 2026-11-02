@@ -1,0 +1,23 @@
+{
+  "category": "grid",
+  "method": "patchcore",
+  "seed": 123,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T21:34:03.825281+00:00",
+  "n_fit": 211,
+  "n_calib": 53,
+  "n_test": 78,
+  "n_test_nominal": 21,
+  "n_test_defect": 57,
+  "fit_time_s": 65.46111872300389,
+  "image_auroc": 0.9657477025898078,
+  "image_ap": 0.9880618411953601,
+  "pixel_auroc": 0.9751120332163234,
+  "pixel_ap": 0.305742767184583,
+  "aupro": 0.8963992033790601,
+  "mrd_image_auroc": 0.33827624617098295,
+  "mrd_aupro": 0.48762082425678244,
+  "mpc_image_auroc": 0.33827624617098295,
+  "mpc_aupro": 0.48762082425678244
+}

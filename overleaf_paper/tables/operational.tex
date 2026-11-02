@@ -1,0 +1,41 @@
+\begin{table}[tbp]
+\centering
+\small
+\caption{Operating point at a target budget of 5 false alarms per 1,000 nominal parts. The threshold is set on held-out train/good images only (42--78 per category) and applied to the full test set. Brackets: 95\% two-stage bootstrap intervals over seeds and test images ($B=2000$). ``Resolution'' is the smallest non-zero rate the test set can express (1000 / nominal test images). Expected cost uses defect prior $\pi=0.01$ and cost ratio $r=10$.}
+\label{tab:operational}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Category} & \textbf{Method} & \textbf{Test TPR} & \textbf{Test FA/1k} & \textbf{Resolution/1k} & \textbf{Exp. cost} \\
+\midrule
+Bottle & PatchCore & 1.000 [1.000, 1.000] & 0.0 [0.0, 0.0] & 50.0 & 0.0000 \\
+Bottle & PaDiM & 0.937 [0.889, 0.974] & 33.3 [0.0, 100.0] & 50.0 & 0.0393 \\
+Bottle & ConvAutoencoder & 0.444 [0.296, 0.603] & 16.7 [0.0, 66.7] & 50.0 & 0.0721 \\
+\midrule
+Cable & PatchCore & 0.866 [0.797, 0.924] & 0.0 [0.0, 0.0] & 17.2 & 0.0134 \\
+Cable & PaDiM & 0.243 [0.134, 0.388] & 23.0 [0.0, 63.2] & 17.2 & 0.0985 \\
+Cable & ConvAutoencoder & 0.007 [0.000, 0.022] & 34.5 [0.0, 86.2] & 17.2 & 0.1334 \\
+\midrule
+Carpet & PatchCore & 0.978 [0.955, 0.996] & 309.5 [154.8, 500.3] & 35.7 & 0.3087 \\
+Carpet & PaDiM & 0.835 [0.738, 0.925] & 59.5 [0.0, 142.9] & 35.7 & 0.0754 \\
+Carpet & ConvAutoencoder & 0.079 [0.030, 0.131] & 190.5 [71.4, 321.4] & 35.7 & 0.2807 \\
+\midrule
+Grid & PatchCore & 0.860 [0.801, 0.912] & 47.6 [0.0, 111.1] & 47.6 & 0.0612 \\
+Grid & PaDiM & 0.316 [0.193, 0.450] & 15.9 [0.0, 63.5] & 47.6 & 0.0841 \\
+Grid & ConvAutoencoder & 0.006 [0.000, 0.023] & 0.0 [0.0, 0.0] & 47.6 & 0.0994 \\
+\midrule
+Hazelnut & PatchCore & 0.967 [0.938, 0.990] & 0.0 [0.0, 0.0] & 25.0 & 0.0033 \\
+Hazelnut & PaDiM & 0.533 [0.352, 0.781] & 108.3 [33.3, 208.3] & 25.0 & 0.1539 \\
+Hazelnut & ConvAutoencoder & 0.586 [0.376, 0.738] & 0.0 [0.0, 0.0] & 25.0 & 0.0414 \\
+\midrule
+Leather & PatchCore & 1.000 [1.000, 1.000] & 72.9 [20.8, 135.4] & 31.2 & 0.0722 \\
+Leather & PaDiM & 0.993 [0.978, 1.000] & 31.2 [0.0, 83.3] & 31.2 & 0.0317 \\
+Leather & ConvAutoencoder & 0.859 [0.808, 0.906] & 500.0 [375.0, 614.6] & 31.2 & 0.5091 \\
+\midrule
+Metal Nut & PatchCore & 0.975 [0.953, 0.993] & 45.5 [0.0, 121.2] & 45.5 & 0.0475 \\
+Metal Nut & PaDiM & 0.910 [0.864, 0.957] & 90.9 [15.2, 197.0] & 45.5 & 0.0990 \\
+Metal Nut & ConvAutoencoder & 0.029 [0.011, 0.050] & 106.1 [30.3, 197.0] & 45.5 & 0.2021 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

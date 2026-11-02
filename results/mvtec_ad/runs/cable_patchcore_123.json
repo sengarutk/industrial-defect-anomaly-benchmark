@@ -1,0 +1,23 @@
+{
+  "category": "cable",
+  "method": "patchcore",
+  "seed": 123,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T19:53:31.651831+00:00",
+  "n_fit": 179,
+  "n_calib": 45,
+  "n_test": 150,
+  "n_test_nominal": 58,
+  "n_test_defect": 92,
+  "fit_time_s": 121.04166993699619,
+  "image_auroc": 0.9928785607196402,
+  "image_ap": 0.9957200784496814,
+  "pixel_auroc": 0.9851261082148836,
+  "pixel_ap": 0.6688297616059218,
+  "aupro": 0.9386335605540558,
+  "mrd_image_auroc": 0.17776528402465436,
+  "mrd_aupro": 0.1423665507594793,
+  "mpc_image_auroc": 0.17776528402465436,
+  "mpc_aupro": 0.1423665507594793
+}

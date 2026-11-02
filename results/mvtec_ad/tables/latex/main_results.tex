@@ -1,0 +1,45 @@
+\begin{table}[tbp]
+\centering
+\small
+\caption{Clean test results on 7 MVTec AD categories. Per category: mean $\pm$ std over 3 seeds (seeds change the train/calibration split, PatchCore's projection and start point, PaDiM's channel subset and the autoencoder's initialisation). \textit{Mean} rows: mean $\pm$ std over categories. AU-PRO is integrated up to FPR $=0.3$ with the exact MVTec protocol.}
+\label{tab:main_results}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Category} & \textbf{Method} & \textbf{Image AUROC} & \textbf{Pixel AUROC} & \textbf{AU-PRO} \\
+\midrule
+Bottle & PatchCore & $1.000 \pm 0.000$ & $0.983 \pm 0.000$ & $0.933 \pm 0.001$ \\
+Bottle & PaDiM & $0.997 \pm 0.001$ & $0.984 \pm 0.001$ & $0.950 \pm 0.001$ \\
+Bottle & ConvAutoencoder & $0.784 \pm 0.008$ & $0.735 \pm 0.004$ & $0.530 \pm 0.003$ \\
+\midrule
+Cable & PatchCore & $0.991 \pm 0.002$ & $0.985 \pm 0.000$ & $0.940 \pm 0.002$ \\
+Cable & PaDiM & $0.855 \pm 0.008$ & $0.971 \pm 0.003$ & $0.905 \pm 0.005$ \\
+Cable & ConvAutoencoder & $0.336 \pm 0.008$ & $0.617 \pm 0.055$ & $0.406 \pm 0.010$ \\
+\midrule
+Carpet & PatchCore & $0.986 \pm 0.000$ & $0.990 \pm 0.000$ & $0.935 \pm 0.002$ \\
+Carpet & PaDiM & $0.964 \pm 0.005$ & $0.987 \pm 0.000$ & $0.943 \pm 0.004$ \\
+Carpet & ConvAutoencoder & $0.335 \pm 0.025$ & $0.735 \pm 0.020$ & $0.417 \pm 0.013$ \\
+\midrule
+Grid & PatchCore & $0.968 \pm 0.004$ & $0.977 \pm 0.002$ & $0.902 \pm 0.005$ \\
+Grid & PaDiM & $0.862 \pm 0.050$ & $0.926 \pm 0.011$ & $0.832 \pm 0.050$ \\
+Grid & ConvAutoencoder & $0.850 \pm 0.044$ & $0.818 \pm 0.026$ & $0.620 \pm 0.040$ \\
+\midrule
+Hazelnut & PatchCore & $1.000 \pm 0.000$ & $0.987 \pm 0.000$ & $0.881 \pm 0.005$ \\
+Hazelnut & PaDiM & $0.858 \pm 0.010$ & $0.981 \pm 0.002$ & $0.869 \pm 0.003$ \\
+Hazelnut & ConvAutoencoder & $0.981 \pm 0.003$ & $0.978 \pm 0.003$ & $0.874 \pm 0.013$ \\
+\midrule
+Leather & PatchCore & $1.000 \pm 0.000$ & $0.992 \pm 0.000$ & $0.973 \pm 0.000$ \\
+Leather & PaDiM & $0.999 \pm 0.001$ & $0.994 \pm 0.001$ & $0.982 \pm 0.004$ \\
+Leather & ConvAutoencoder & $0.860 \pm 0.005$ & $0.968 \pm 0.007$ & $0.933 \pm 0.005$ \\
+\midrule
+Metal Nut & PatchCore & $0.997 \pm 0.001$ & $0.984 \pm 0.000$ & $0.935 \pm 0.001$ \\
+Metal Nut & PaDiM & $0.973 \pm 0.004$ & $0.972 \pm 0.005$ & $0.916 \pm 0.006$ \\
+Metal Nut & ConvAutoencoder & $0.383 \pm 0.012$ & $0.671 \pm 0.009$ & $0.349 \pm 0.022$ \\
+\midrule
+\textit{Mean} & PatchCore & $0.992 \pm 0.012$ & $0.985 \pm 0.005$ & $0.928 \pm 0.029$ \\
+\textit{Mean} & PaDiM & $0.930 \pm 0.068$ & $0.974 \pm 0.022$ & $0.914 \pm 0.051$ \\
+\textit{Mean} & ConvAutoencoder & $0.647 \pm 0.283$ & $0.789 \pm 0.140$ & $0.590 \pm 0.233$ \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

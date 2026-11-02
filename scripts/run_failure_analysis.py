@@ -69,7 +69,7 @@ def main() -> None:
             axes[0, 0].set_title("image", fontsize=9)
             axes[0, 1].set_title("ground truth", fontsize=9)
             fig.suptitle(f"{cat} / {METHOD_NAMES[method]} (seed {seed}, budget {budget:g}/1k)", fontsize=10)
-            fig.tight_layout()
+            fig.tight_layout(rect=(0, 0, 1, 1 - 0.35 / (3 * len(items))))
             fig.savefig(os.path.join(out_dir, f"{cat}_{method}.png"), dpi=110)
             plt.close(fig)
     pd.DataFrame(records).to_csv(os.path.join(args.results_dir, "tables", "failure_cases.csv"), index=False)

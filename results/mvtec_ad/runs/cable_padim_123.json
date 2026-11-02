@@ -1,0 +1,23 @@
+{
+  "category": "cable",
+  "method": "padim",
+  "seed": 123,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T20:02:04.844435+00:00",
+  "n_fit": 179,
+  "n_calib": 45,
+  "n_test": 150,
+  "n_test_nominal": 58,
+  "n_test_defect": 92,
+  "fit_time_s": 21.758744586986722,
+  "image_auroc": 0.8452023988005997,
+  "image_ap": 0.8788880404922911,
+  "pixel_auroc": 0.9701510171494594,
+  "pixel_ap": 0.42703528185725376,
+  "aupro": 0.898690052866738,
+  "mrd_image_auroc": 0.14086706646676664,
+  "mrd_aupro": 0.20537892677460395,
+  "mpc_image_auroc": 0.13930534732633684,
+  "mpc_aupro": 0.20537892677460395
+}

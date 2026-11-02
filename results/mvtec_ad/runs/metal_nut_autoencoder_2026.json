@@ -1,0 +1,23 @@
+{
+  "category": "metal_nut",
+  "method": "autoencoder",
+  "seed": 2026,
+  "device": "cuda",
+  "commit": "8d67860",
+  "timestamp": "2026-11-02T09:34:54.976204+00:00",
+  "n_fit": 176,
+  "n_calib": 44,
+  "n_test": 115,
+  "n_test_nominal": 22,
+  "n_test_defect": 93,
+  "fit_time_s": 19.657948281000017,
+  "image_auroc": 0.3836754643206256,
+  "image_ap": 0.7573176523916175,
+  "pixel_auroc": 0.664377806632945,
+  "pixel_ap": 0.16723207996591546,
+  "aupro": 0.35964260580976093,
+  "mrd_image_auroc": 0.003557076137721296,
+  "mrd_aupro": 0.03558011345490834,
+  "mpc_image_auroc": -0.12064190289996739,
+  "mpc_aupro": -0.05802226931475439
+}

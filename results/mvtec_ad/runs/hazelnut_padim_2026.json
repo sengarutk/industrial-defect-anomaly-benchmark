@@ -1,0 +1,23 @@
+{
+  "category": "hazelnut",
+  "method": "padim",
+  "seed": 2026,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T22:43:15.789790+00:00",
+  "n_fit": 313,
+  "n_calib": 78,
+  "n_test": 110,
+  "n_test_nominal": 40,
+  "n_test_defect": 70,
+  "fit_time_s": 18.88479416599148,
+  "image_auroc": 0.8692857142857143,
+  "image_ap": 0.8905755804601365,
+  "pixel_auroc": 0.9783372796331063,
+  "pixel_ap": 0.48531450193314307,
+  "aupro": 0.8654931229460404,
+  "mrd_image_auroc": 0.09982142857142857,
+  "mrd_aupro": 0.22255666695591772,
+  "mpc_image_auroc": 0.07992063492063495,
+  "mpc_aupro": 0.22255666695591772
+}

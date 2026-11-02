@@ -1,0 +1,23 @@
+{
+  "category": "carpet",
+  "method": "padim",
+  "seed": 42,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T20:47:20.468622+00:00",
+  "n_fit": 224,
+  "n_calib": 56,
+  "n_test": 117,
+  "n_test_nominal": 28,
+  "n_test_defect": 89,
+  "fit_time_s": 13.269280294014607,
+  "image_auroc": 0.9622792937399679,
+  "image_ap": 0.9888601493618949,
+  "pixel_auroc": 0.9873403944374054,
+  "pixel_ap": 0.572481845368377,
+  "aupro": 0.9387234029828952,
+  "mrd_image_auroc": 0.2362448724808275,
+  "mrd_aupro": 0.23328923354748868,
+  "mpc_image_auroc": 0.23381487426431244,
+  "mpc_aupro": 0.23316342498389797
+}

@@ -1,0 +1,23 @@
+{
+  "category": "carpet",
+  "method": "patchcore",
+  "seed": 123,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T20:56:49.164335+00:00",
+  "n_fit": 224,
+  "n_calib": 56,
+  "n_test": 117,
+  "n_test_nominal": 28,
+  "n_test_defect": 89,
+  "fit_time_s": 80.11902749000001,
+  "image_auroc": 0.9859550561797752,
+  "image_ap": 0.996201793009543,
+  "pixel_auroc": 0.9895898409288277,
+  "pixel_ap": 0.5536400188079273,
+  "aupro": 0.9362564718432517,
+  "mrd_image_auroc": 0.1072989120741929,
+  "mrd_aupro": 0.15063587729773437,
+  "mpc_image_auroc": 0.10716515070447646,
+  "mpc_aupro": 0.15063587729773437
+}

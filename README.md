@@ -15,7 +15,13 @@ cost-calibrated threshold selection measured out of sample.
 ## Results
 
 <!-- RESULTS:START -->
-Run `python scripts/generate_report.py` to fill this section from the result tables.
+| Method | Image AUROC | AU-PRO | MRD (AUROC) | TPR @ 5/1k target | Realised FA/1k | Expected cost (r=10) |
+|:--|--:|--:|--:|--:|--:|--:|
+| PatchCore | 0.992 | 0.928 | 0.133 | 0.949 | 67.9 | 0.0723 |
+| PaDiM | 0.930 | 0.914 | 0.188 | 0.681 | 51.7 | 0.0831 |
+| ConvAutoencoder | 0.647 | 0.590 | 0.067 | 0.287 | 121.1 | 0.1912 |
+
+Means over 7 categories × 3 seeds (63 runs). Thresholds come from held-out train/good images only; realised false-alarm rates are measured on test sets with 20–58 nominal images, i.e. a resolution of 17–50 per 1,000. CCT vs the nominal-only budget rule (expected cost, out of sample): PatchCore -51%, PaDiM -10%, ConvAutoencoder -10%. Full tables: [docs/benchmark_report.md](docs/benchmark_report.md).
 <!-- RESULTS:END -->
 
 What these numbers can and cannot show:

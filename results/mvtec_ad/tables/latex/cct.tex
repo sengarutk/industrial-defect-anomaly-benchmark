@@ -1,0 +1,28 @@
+\begin{table}[tbp]
+\centering
+\small
+\caption{Out-of-sample threshold selection, cost ratio $r=10$, prior $\pi=0.01$, budget 5/1k. Each run's test set is split 50/50 (stratified) 20 times; thresholds use the calibration half plus held-out train/good nominals; metrics are measured on the other half. Cost: mean $\pm$ std over categories (each category averaged over seeds and splits). ``Violations'': share of evaluations whose realised FA/1k exceeds the budget. $p$: Holm-adjusted two-sided Wilcoxon signed-rank test against the nominal-only budget rule with categories as units ($n=7$, smallest attainable $p=0.016$ before adjustment).}
+\label{tab:cct}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Method} & \textbf{Rule} & \textbf{Expected cost} & \textbf{FA/1k} & \textbf{Violations} & \textbf{$p$ (Holm)} \\
+\midrule
+PatchCore & Nominal-only budget & $0.0359 \pm 0.0300$ & 29.7 & 28\% &  \\
+PatchCore & CCT (budget) & $0.0175 \pm 0.0231$ & 8.6 & 10\% & 1.000 \\
+PatchCore & CCT (no budget) & $0.0173 \pm 0.0227$ & 8.6 & 10\% & 1.000 \\
+PatchCore & Oracle (in-sample) & $0.0043 \pm 0.0062$ & 0.0 & 0\% &  \\
+\midrule
+PaDiM & Nominal-only budget & $0.0733 \pm 0.0335$ & 33.9 & 38\% &  \\
+PaDiM & CCT (budget) & $0.0660 \pm 0.0433$ & 23.9 & 29\% & 0.875 \\
+PaDiM & CCT (no budget) & $0.0761 \pm 0.0566$ & 43.5 & 40\% & 1.000 \\
+PaDiM & Oracle (in-sample) & $0.0350 \pm 0.0334$ & 1.4 & 3\% &  \\
+\midrule
+ConvAutoencoder & Nominal-only budget & $0.1031 \pm 0.0402$ & 28.2 & 26\% &  \\
+ConvAutoencoder & CCT (budget) & $0.0922 \pm 0.0286$ & 15.8 & 18\% & 0.781 \\
+ConvAutoencoder & CCT (no budget) & $0.0906 \pm 0.0317$ & 16.4 & 18\% & 0.188 \\
+ConvAutoencoder & Oracle (in-sample) & $0.0624 \pm 0.0356$ & 0.0 & 0\% &  \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

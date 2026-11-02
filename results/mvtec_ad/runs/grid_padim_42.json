@@ -1,0 +1,23 @@
+{
+  "category": "grid",
+  "method": "padim",
+  "seed": 42,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T21:26:56.054956+00:00",
+  "n_fit": 211,
+  "n_calib": 53,
+  "n_test": 78,
+  "n_test_nominal": 21,
+  "n_test_defect": 57,
+  "fit_time_s": 9.49549979501171,
+  "image_auroc": 0.8947368421052632,
+  "image_ap": 0.9561199022329294,
+  "pixel_auroc": 0.9283907413155458,
+  "pixel_ap": 0.28152102565634507,
+  "aupro": 0.8593994123852824,
+  "mrd_image_auroc": 0.31082335468300376,
+  "mrd_aupro": 0.4345480311984331,
+  "mpc_image_auroc": 0.31082335468300376,
+  "mpc_aupro": 0.4345480311984331
+}

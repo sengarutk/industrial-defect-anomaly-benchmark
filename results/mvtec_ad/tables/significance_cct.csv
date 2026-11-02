@@ -1,0 +1,7 @@
+comparison,cost_ratio,unit,n_pairs,n_nonzero,mean_diff,hodges_lehmann,statistic,p_value,rank_biserial,min_attainable_p,holm_adjusted_p,reject_h0
+autoencoder: cct_budget vs nominal_budget,10.0,category,7,6,-0.010816883125294592,-0.009263446401799099,3.0,0.15625,-0.7142857142857143,0.03125,0.78125,False
+autoencoder: cct_unconstrained vs nominal_budget,10.0,category,7,6,-0.01243403596469122,-0.007601061076604559,0.0,0.03125,-1.0,0.03125,0.1875,False
+padim: cct_budget vs nominal_budget,10.0,category,7,7,-0.007335025532386267,-0.002942994772455026,6.0,0.21875,-0.5714285714285714,0.015625,0.875,False
+padim: cct_unconstrained vs nominal_budget,10.0,category,7,7,0.002723882558799005,0.0015541857047666717,13.0,0.9375,0.07142857142857142,0.015625,1.0,False
+patchcore: cct_budget vs nominal_budget,10.0,category,7,7,-0.018448179557185508,-0.017934543425950397,10.0,0.578125,-0.2857142857142857,0.015625,1.0,False
+patchcore: cct_unconstrained vs nominal_budget,10.0,category,7,7,-0.01859596280841704,-0.01817554792370152,10.0,0.578125,-0.2857142857142857,0.015625,1.0,False

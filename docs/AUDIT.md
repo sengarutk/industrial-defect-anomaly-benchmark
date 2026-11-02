@@ -41,6 +41,12 @@ the audit refer to that old commit.
 | E | Paper incomplete | Rewritten with protocol, results, limitations | `overleaf_paper/main.tex` |
 | F | Hygiene | BOMs removed, duplicate assets deleted, large maps out of git, CI added | `.github/workflows/tests.yml` |
 
+What the honest measurements changed: the GPU coreset speedup is about 8× at 100k patches (median of 3
+timings, same coverage radius as the CPU reference), not the 274.6× previously claimed; CCT's out-of-sample cost
+differences are not statistically significant; realised test false-alarm rates exceed the 5/1k target in most
+runs because nominal training images do not calibrate the test distribution. The paper was rewritten around
+these results.
+
 Not fixable inside this repository: the old fabricated artifacts remain in **git history** on `main`
 (rewriting published history was not done). The 66 MB stale `flagship1_overleaf_package.zip` in the working
 copy is untracked and was left for the owner to delete; `scripts/sync_paper_assets.py --zip` builds a fresh one.

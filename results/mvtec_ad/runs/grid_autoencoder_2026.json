@@ -1,0 +1,23 @@
+{
+  "category": "grid",
+  "method": "autoencoder",
+  "seed": 2026,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T21:51:47.372500+00:00",
+  "n_fit": 211,
+  "n_calib": 53,
+  "n_test": 78,
+  "n_test_nominal": 21,
+  "n_test_defect": 57,
+  "fit_time_s": 219.27667416800978,
+  "image_auroc": 0.8020050125313283,
+  "image_ap": 0.8901950166724188,
+  "pixel_auroc": 0.8400352500523746,
+  "pixel_ap": 0.060826490190738616,
+  "aupro": 0.6600165148304876,
+  "mrd_image_auroc": 0.19896964633806735,
+  "mrd_aupro": 0.13418659091793098,
+  "mpc_image_auroc": 0.19767010117887304,
+  "mpc_aupro": 0.11248810623932898
+}

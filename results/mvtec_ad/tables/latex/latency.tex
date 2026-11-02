@@ -1,0 +1,17 @@
+\begin{table}[tbp]
+\centering
+\small
+\caption{Latency at batch size 1 on NVIDIA GeForce RTX 4050 Laptop GPU, mean over 7 categories. $T_{model}$: device tensor to scores and maps; $T_{e2e}$: PNG on disk to scores and maps.}
+\label{tab:latency}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{P50 $T_{model}$ (ms)} & \textbf{P95 $T_{model}$ (ms)} & \textbf{P50 $T_{e2e}$ (ms)} & \textbf{Peak VRAM (MB)} \\
+\midrule
+PatchCore & 12.08 & 13.94 & 43.18 & 197 \\
+PaDiM & 7.65 & 9.87 & 32.37 & 219 \\
+ConvAutoencoder & 4.87 & 6.18 & 30.90 & 11 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

@@ -1,0 +1,23 @@
+{
+  "category": "bottle",
+  "method": "autoencoder",
+  "seed": 2026,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T19:17:13.254782+00:00",
+  "n_fit": 167,
+  "n_calib": 42,
+  "n_test": 83,
+  "n_test_nominal": 20,
+  "n_test_defect": 63,
+  "fit_time_s": 497.1821960309753,
+  "image_auroc": 0.7817460317460317,
+  "image_ap": 0.9333702708731193,
+  "pixel_auroc": 0.7341061071150549,
+  "pixel_ap": 0.2013554416833924,
+  "aupro": 0.5267268277001541,
+  "mrd_image_auroc": 0.11649029982363314,
+  "mrd_aupro": 0.21217746254590536,
+  "mpc_image_auroc": 0.11062610229276895,
+  "mpc_aupro": 0.21132828467411982
+}

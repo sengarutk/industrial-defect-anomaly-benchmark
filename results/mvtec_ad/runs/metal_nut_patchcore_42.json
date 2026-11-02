@@ -1,0 +1,23 @@
+{
+  "category": "metal_nut",
+  "method": "patchcore",
+  "seed": 42,
+  "device": "cuda",
+  "commit": "8d67860",
+  "timestamp": "2026-11-02T09:19:57.644860+00:00",
+  "n_fit": 176,
+  "n_calib": 44,
+  "n_test": 115,
+  "n_test_nominal": 22,
+  "n_test_defect": 93,
+  "fit_time_s": 25.84707777799997,
+  "image_auroc": 0.9965786901270772,
+  "image_ap": 0.9992039572893681,
+  "pixel_auroc": 0.9834098476895077,
+  "pixel_ap": 0.8609676811666283,
+  "aupro": 0.9353148798461857,
+  "mrd_image_auroc": 0.17185293798197024,
+  "mrd_aupro": 0.19243924486327124,
+  "mpc_image_auroc": 0.17185293798197024,
+  "mpc_aupro": 0.19243924486327124
+}

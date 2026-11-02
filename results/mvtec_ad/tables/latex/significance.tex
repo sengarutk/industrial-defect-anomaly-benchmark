@@ -1,0 +1,17 @@
+\begin{table}[tbp]
+\centering
+\small
+\caption{Paired comparison of expected cost ($r=10$, budget 5/1k) between methods, one value per category (mean over seeds). Two-sided Wilcoxon signed-rank test; Holm adjustment over the three comparisons.}
+\label{tab:significance}
+\begin{adjustbox}{max width=\linewidth}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Comparison} & \textbf{$n$} & \textbf{Hodges--Lehmann $\Delta$} & \textbf{$p$} & \textbf{$p$ (Holm)} \\
+\midrule
+ConvAutoencoder vs PaDiM & 7 & +0.0685 & 0.156 & 0.312 \\
+ConvAutoencoder vs PatchCore & 7 & +0.0876 & 0.031 & 0.094 \\
+PaDiM vs PatchCore & 7 & +0.0342 & 0.578 & 0.578 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table}

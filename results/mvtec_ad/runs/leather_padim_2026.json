@@ -1,0 +1,23 @@
+{
+  "category": "leather",
+  "method": "padim",
+  "seed": 2026,
+  "device": "cuda",
+  "commit": "8d67860",
+  "timestamp": "2026-11-02T09:15:20.281566+00:00",
+  "n_fit": 196,
+  "n_calib": 49,
+  "n_test": 124,
+  "n_test_nominal": 32,
+  "n_test_defect": 92,
+  "fit_time_s": 18.872082331,
+  "image_auroc": 1.0,
+  "image_ap": 1.0000000000000002,
+  "pixel_auroc": 0.9931165600268672,
+  "pixel_ap": 0.40821601060462553,
+  "aupro": 0.9812138866300101,
+  "mrd_image_auroc": 0.14453125000000003,
+  "mrd_aupro": 0.12112431049810206,
+  "mpc_image_auroc": 0.14453125000000003,
+  "mpc_aupro": 0.12111002381145679
+}

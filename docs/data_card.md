@@ -1,12 +1,19 @@
-# Dataset Data Card: MVTec Anomaly Detection (7 Categories)
+# Data card
 
-- **Benchmark Dataset:** MVTec Anomaly Detection (Bergmann et al., CVPR 2019 / IJCV 2021)
-- **Hugging Face Mirror:** `foersben/mvtec-ad`
-- **Evaluated Categories (7 Categories, 63 Runs):**
-  - **Rigid Objects:** `bottle` (209 train / 83 test), `metal_nut` (220 train / 115 test)
-  - **Deformable Objects:** `cable` (224 train / 150 test)
-  - **Natural/Organic Structures:** `hazelnut` (391 train / 110 test)
-  - **Textures & Periodic Structures:** `carpet` (280 train / 117 test), `grid` (264 train / 78 test), `leather` (245 train / 124 test)
-- **Calibration Protocol:** 50/50 Stratified Out-of-Sample Split for Cost-Calibrated Thresholding (CCT)
-- **Physical Corruptions (18 Conditions):** Defocus Blur, Motion Blur, Brightness Decay, Sensor Noise, JPEG Compression, Interpolation Downscaling
-- **Stream Dynamics:** IID, Block-Correlated Markov Burst ($L=20$), Gradual Illumination Drift ($0.10 \times \sigma_{\text{nom}}$), and Mixed Corruptions ($p_{\text{corr}} \in [0.10, 0.50]$)
+* **Dataset:** MVTec Anomaly Detection (Bergmann et al., CVPR 2019; IJCV 2021), CC BY-NC-SA 4.0.
+* **Source used here:** Hugging Face mirror `foersben/mvtec-ad`, downloaded by `scripts/download_dataset.py`.
+* **Integrity:** every category is checked against the official per-split, per-defect-type image counts in `src/mvtec.py` (`MVTEC_MANIFEST`) and every defect image must have a mask; loaders refuse anything else.
+* **Preprocessing:** RGB, bilinear resize to 256×256, ImageNet normalisation; masks resized with nearest-neighbour.
+* **Splits:** for each seed, 20% of train/good is held out as a nominal calibration set; the rest fits the model. The test split is used unchanged.
+
+| category   |   train_good |   test_good |   test_defective |   defect_types |   fit_images_per_seed |   calibration_images_per_seed |
+|:-----------|-------------:|------------:|-----------------:|---------------:|----------------------:|------------------------------:|
+| bottle     |          209 |          20 |               63 |              3 |                   167 |                            42 |
+| cable      |          224 |          58 |               92 |              8 |                   179 |                            45 |
+| carpet     |          280 |          28 |               89 |              5 |                   224 |                            56 |
+| grid       |          264 |          21 |               57 |              5 |                   211 |                            53 |
+| hazelnut   |          391 |          40 |               70 |              4 |                   313 |                            78 |
+| leather    |          245 |          32 |               92 |              5 |                   196 |                            49 |
+| metal_nut  |          220 |          22 |               93 |              4 |                   176 |                            44 |
+
+Totals: 1833 train, 777 test (556 defective, each with a ground-truth mask).

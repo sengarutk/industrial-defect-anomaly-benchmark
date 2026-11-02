@@ -74,6 +74,14 @@ Compared rules: nominal-only budget, CCT with budget, CCT without budget, and an
   (one value per category, averaged over seeds), Holm-adjusted. With n categories the smallest attainable
   two-sided p-value is 2/2ⁿ (0.0156 for n = 7), which bounds what any claim of significance can show.
 
+## Provenance of the published sweep
+
+The host GPU was unavailable for part of the October 2026 rerun, so the sweep was resumed across sessions:
+the first runs executed on CPU and the remainder on the GPU. Each record in `results/mvtec_ad/runs/` stores
+its device and git commit; the commits differ only in changes outside the benchmark path (profiling moved to
+its own script, removal of UTF-8 byte-order marks; verified with `git diff 76887cf 8d67860`). Accuracy metrics do not depend on the device beyond floating-point
+nondeterminism; latency is measured separately and only on the GPU.
+
 ## Systems measurements (GPU required)
 
 * `scripts/profile_latency.py`: batch-1 latency per category × method. T_model = device tensor → scores and

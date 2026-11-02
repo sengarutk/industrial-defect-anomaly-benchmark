@@ -1,0 +1,23 @@
+{
+  "category": "hazelnut",
+  "method": "patchcore",
+  "seed": 2026,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T22:38:01.362844+00:00",
+  "n_fit": 313,
+  "n_calib": 78,
+  "n_test": 110,
+  "n_test_nominal": 40,
+  "n_test_defect": 70,
+  "fit_time_s": 264.7226967480092,
+  "image_auroc": 1.0,
+  "image_ap": 0.9999999999999998,
+  "pixel_auroc": 0.9866540309521347,
+  "pixel_ap": 0.5841986512125783,
+  "aupro": 0.8835365722951803,
+  "mrd_image_auroc": 0.04857142857142857,
+  "mrd_aupro": 0.07369136614565232,
+  "mpc_image_auroc": 0.04857142857142857,
+  "mpc_aupro": 0.07369136614565232
+}

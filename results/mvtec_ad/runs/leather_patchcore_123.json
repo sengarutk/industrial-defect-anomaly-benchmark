@@ -1,0 +1,23 @@
+{
+  "category": "leather",
+  "method": "patchcore",
+  "seed": 123,
+  "device": "cuda",
+  "commit": "8d67860",
+  "timestamp": "2026-10-31T00:51:05.354075+00:00",
+  "n_fit": 196,
+  "n_calib": 49,
+  "n_test": 124,
+  "n_test_nominal": 32,
+  "n_test_defect": 92,
+  "fit_time_s": 23.036041124999997,
+  "image_auroc": 1.0,
+  "image_ap": 1.0000000000000002,
+  "pixel_auroc": 0.992170218853494,
+  "pixel_ap": 0.41410805265838957,
+  "aupro": 0.9731284103017573,
+  "mrd_image_auroc": 0.05108318236714975,
+  "mrd_aupro": 0.06920440994085857,
+  "mpc_image_auroc": 0.05108318236714975,
+  "mpc_aupro": 0.06882464041059465
+}

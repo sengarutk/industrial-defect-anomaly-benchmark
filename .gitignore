@@ -43,4 +43,6 @@ overleaf_paper/*.log
 overleaf_paper/*.bbl
 overleaf_paper/*.blg
 overleaf_paper/*.out
-overleaf_paper/*.pdf
+
+# Pipeline logs
+logs/

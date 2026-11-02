@@ -1,0 +1,4 @@
+comparison,metric,unit,n_pairs,n_nonzero,mean_diff,hodges_lehmann,statistic,p_value,rank_biserial,min_attainable_p,holm_adjusted_p,reject_h0
+autoencoder vs padim,expected_cost_r10,category,7,7,0.1080523976071329,0.06849511755259083,5.0,0.15625,0.6428571428571429,0.015625,0.3125,False
+autoencoder vs patchcore,expected_cost_r10,category,7,7,0.11885609114396536,0.08757695196887771,1.0,0.03125,0.9285714285714286,0.015625,0.09375,False
+padim vs patchcore,expected_cost_r10,category,7,7,0.010803693536832467,0.03417890155496268,10.0,0.578125,0.2857142857142857,0.015625,0.578125,False

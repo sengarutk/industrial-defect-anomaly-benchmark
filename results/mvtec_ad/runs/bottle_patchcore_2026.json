@@ -1,0 +1,23 @@
+{
+  "category": "bottle",
+  "method": "patchcore",
+  "seed": 2026,
+  "device": "cpu",
+  "commit": "76887cf",
+  "timestamp": "2026-10-26T19:01:07.394892+00:00",
+  "n_fit": 167,
+  "n_calib": 42,
+  "n_test": 83,
+  "n_test_nominal": 20,
+  "n_test_defect": 63,
+  "fit_time_s": 103.84435352697619,
+  "image_auroc": 1.0,
+  "image_ap": 0.9999999999999998,
+  "pixel_auroc": 0.9830213753967642,
+  "pixel_ap": 0.7310871147679431,
+  "aupro": 0.9329035560450422,
+  "mrd_image_auroc": 0.0592151675485009,
+  "mrd_aupro": 0.10712291224313858,
+  "mpc_image_auroc": 0.0592151675485009,
+  "mpc_aupro": 0.10712291224313858
+}
